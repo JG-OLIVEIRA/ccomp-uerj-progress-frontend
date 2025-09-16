@@ -72,6 +72,12 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
       const studentDisciplinesResponse = await fetch(`/api/students/${student.studentId}/disciplines`);
       const studentDisciplines = await studentDisciplinesResponse.json();
       
+      if (!studentDisciplines.current || !Array.isArray(studentDisciplines.current)) {
+          setSchedule(newSchedule);
+          setIsLoading(false);
+          return;
+      }
+
       const currentDisciplineIds = new Set(studentDisciplines.current.map((d: any) => d.disciplineId));
       
       const coursePromises = allCourses

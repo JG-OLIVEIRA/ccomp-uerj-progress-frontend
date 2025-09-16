@@ -44,6 +44,29 @@ type ApiDisciplineDetail = {
   classes: ApiClassDetail[];
 };
 
+function normalizeTeacherName(name: string): string {
+  if (!name || typeof name !== 'string') return '';
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function normalizeClassTimes(times: string): string {
+    if (!times || typeof times !== 'string') return '';
+    const dayMapping: Record<string, string> = {
+        'SEG': 'Seg', 'TER': 'Ter', 'QUA': 'Qua', 'QUI': 'Qui', 'SEX': 'Sex', 'SAB': 'Sáb'
+    };
+    // This regex finds day abbreviations followed by time slots
+    const regex = /(SEG|TER|QUA|QUI|SEX|SAB)((\s+[A-Z0-9]+)+)/g;
+    return times.replace(regex, (match, day, timeSlots) => {
+        const normalizedDay = dayMapping[day] || day;
+        return ` / ${normalizedDay}${timeSlots}`;
+    }).slice(3); // Remove the leading ' / '
+}
+
+
 export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCredits }: CourseDetailModalProps) {
   const [details, setDetails] = useState<ApiDisciplineDetail | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -253,8 +276,8 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
                             <AccordionTrigger>Turma {cls.number}</AccordionTrigger>
                             <AccordionContent>
                                 <div className="text-sm space-y-3">
-                                    <p><span className="font-semibold">Professor(a):</span> {cls.teacher}</p>
-                                    <p><span className="font-semibold">Horários:</span> {cls.times}</p>
+                                    <p><span className="font-semibold">Professor(a):</span> {normalizeTeacherName(cls.teacher)}</p>
+                                    <p><span className="font-semibold">Horários:</span> {normalizeClassTimes(cls.times)}</p>
                                     {cls.whatsappGroup ? (
                                       <div className='flex items-center gap-2'>
                                         <Link className='h-4 w-4'/>

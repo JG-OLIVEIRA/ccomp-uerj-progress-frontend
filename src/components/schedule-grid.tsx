@@ -131,7 +131,7 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
     };
 
     fetchSchedules();
-  }, [student, courseStatuses]); // Rerun when statuses change
+  }, [student, courseStatuses, allCourses]); // Rerun when statuses change, and allCourses is available.
 
   if (!student) {
     return (
@@ -206,5 +206,3 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
     </Card>
   );
 }
-
-    

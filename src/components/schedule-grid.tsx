@@ -78,18 +78,17 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
           return;
       }
 
-      const currentDisciplineIds = new Set(studentDisciplines.current.map((d: any) => d.disciplineId));
+      const currentDisciplineDetails = studentDisciplines.current as { disciplineId: string; classNumber: number }[];
       
-      const coursePromises = allCourses
-        .filter(c => currentDisciplineIds.has(c.disciplineId) && !c.isElectiveGroup)
-        .map(async course => {
+      const coursePromises = currentDisciplineDetails.map(async (studentClass) => {
+        const course = allCourses.find(c => c.disciplineId === studentClass.disciplineId && !c.isElectiveGroup);
+        if(!course) return;
+
           const res = await fetch(`/api/disciplines/${course.disciplineId}`);
           if (!res.ok) return null;
           const disciplineDetails = await res.json();
           
-          const studentClass = studentDisciplines.current.find((d: any) => d.disciplineId === course.disciplineId);
-
-          if (!disciplineDetails.classes || !studentClass) return null;
+          if (!disciplineDetails.classes) return null;
 
           const chosenClass = disciplineDetails.classes.find((c: any) => c.number === studentClass.classNumber);
           
@@ -193,3 +192,4 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
     </Card>
   );
 }
+

@@ -8,6 +8,7 @@ import { Card } from './ui/card';
 import { ElectiveModal } from './elective-modal';
 import { CourseDetailModal } from './course-detail-modal';
 import { StudentContext, CourseStatus } from '@/contexts/student-context';
+import { RequirementsSummary } from './requirements-summary';
 
 type Line = {
   key: string;
@@ -45,7 +46,7 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
     }
 
     const completedCredits = courses.reduce((acc, course) => {
-        if (courseStatuses[course.id] === 'COMPLETED') {
+        if (courseStatuses[course.id] === 'COMPLETED' && !course.isElectiveGroup) {
             return acc + course.credits;
         }
         return acc;
@@ -163,7 +164,7 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
       <Card className="p-4 sm:p-6 lg:p-8 overflow-x-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold tracking-tight text-primary">Fluxograma do Currículo</h2>
-          <div className="flex justify-center items-center gap-4 mt-2">
+          <div className="flex flex-col justify-center items-center gap-4 mt-2">
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Uma visualização interativa do currículo de Ciência da Computação. Clique nos cursos para ver detalhes e rastrear dependências.
             </p>
@@ -171,6 +172,9 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
                 <div className="text-sm font-medium text-white bg-primary/80 rounded-md px-3 py-1">
                     Créditos Totais: {totalCredits}
                 </div>
+            )}
+            {student && (
+              <RequirementsSummary allCourses={courses} courseStatuses={courseStatuses} />
             )}
           </div>
         </div>

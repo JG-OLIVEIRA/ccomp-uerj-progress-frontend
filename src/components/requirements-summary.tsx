@@ -1,22 +1,23 @@
 
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useContext } from 'react';
 import type { Course } from '@/lib/courses';
-import type { CourseStatus } from '@/contexts/student-context';
+import { StudentContext, type CourseStatus } from '@/contexts/student-context';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
+import { Skeleton } from './ui/skeleton';
 
 const REQUIRED_MANDATORY_CREDITS = 177;
 const REQUIRED_ELECTIVE_CREDITS = 20;
 
 type RequirementsSummaryProps = {
   allCourses: Course[];
-  courseStatuses: Record<string, CourseStatus>;
 };
 
-export function RequirementsSummary({ allCourses, courseStatuses }: RequirementsSummaryProps) {
+export function RequirementsSummary({ allCourses }: RequirementsSummaryProps) {
+  const { student, courseStatuses } = useContext(StudentContext)!;
 
   const summary = useMemo(() => {
     let completedMandatory = 0;
@@ -51,8 +52,21 @@ export function RequirementsSummary({ allCourses, courseStatuses }: Requirements
     };
   }, [allCourses, courseStatuses]);
 
+  if (!student) {
+    return (
+        <Card className="w-full max-w-4xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-lg text-center">Requisitos Curriculares da Titulação</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center text-muted-foreground">
+                Faça login para ver seu progresso de créditos.
+            </CardContent>
+        </Card>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-2xl mt-4">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="text-lg text-center">Requisitos Curriculares da Titulação</CardTitle>
       </CardHeader>

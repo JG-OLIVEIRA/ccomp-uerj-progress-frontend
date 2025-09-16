@@ -8,7 +8,6 @@ import { Card } from './ui/card';
 import { ElectiveModal } from './elective-modal';
 import { CourseDetailModal } from './course-detail-modal';
 import { StudentContext, CourseStatus } from '@/contexts/student-context';
-import { RequirementsSummary } from './requirements-summary';
 
 type Line = {
   key: string;
@@ -172,9 +171,6 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
                 <div className="text-sm font-medium text-white bg-primary/80 rounded-md px-3 py-1">
                     Créditos Totais: {totalCredits}
                 </div>
-            )}
-            {student && (
-              <RequirementsSummary allCourses={courses} courseStatuses={courseStatuses} />
             )}
           </div>
         </div>

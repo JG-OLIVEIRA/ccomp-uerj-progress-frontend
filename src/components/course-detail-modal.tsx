@@ -58,12 +58,22 @@ function normalizeClassTimes(times: string): string {
     const dayMapping: Record<string, string> = {
         'SEG': 'Seg', 'TER': 'Ter', 'QUA': 'Qua', 'QUI': 'Qui', 'SEX': 'Sex', 'SAB': 'Sáb'
     };
-    // This regex finds day abbreviations followed by time slots
-    const regex = /(SEG|TER|QUA|QUI|SEX|SAB)((\s+[A-Z0-9]+)+)/g;
-    return times.replace(regex, (match, day, timeSlots) => {
-        const normalizedDay = dayMapping[day] || day;
-        return ` / ${normalizedDay}${timeSlots}`;
-    }).slice(3); // Remove the leading ' / '
+    const parts = times.trim().split(/\s+/);
+    let result = '';
+    let currentDay = '';
+
+    for (const part of parts) {
+        if (dayMapping[part]) {
+            if (currentDay) { // If we're already processing a day, this is a new one
+                result += ' / ';
+            }
+            currentDay = dayMapping[part];
+            result += `${currentDay}`;
+        } else { // This is a time slot
+            result += ` ${part}`;
+        }
+    }
+    return result;
 }
 
 

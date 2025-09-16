@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
@@ -26,6 +27,7 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const { student, courseStatuses, setCourseIdMapping } = useContext(StudentContext)!;
   const [lockedCourses, setLockedCourses] = useState<Set<string>>(new Set());
+  const [totalCredits, setTotalCredits] = useState(0);
 
   useEffect(() => {
     setCourseIdMapping(idMapping);
@@ -38,16 +40,29 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
   useEffect(() => {
     if (!student) {
       setLockedCourses(new Set());
+      setTotalCredits(0);
       return;
     }
 
+    const completedCredits = courses.reduce((acc, course) => {
+        if (courseStatuses[course.id] === 'COMPLETED') {
+            return acc + course.credits;
+        }
+        return acc;
+    }, 0);
+    setTotalCredits(completedCredits);
+
     const newLockedCourses = new Set<string>();
     courses.forEach(course => {
-      if (course.dependencies.length > 0) {
-        const areDependenciesMet = course.dependencies.every(depId => courseStatuses[depId] === 'COMPLETED');
-        if (!areDependenciesMet) {
-          newLockedCourses.add(course.id);
-        }
+      // Lock if dependencies are not met
+      const areDependenciesMet = course.dependencies.every(depId => courseStatuses[depId] === 'COMPLETED');
+      if (!areDependenciesMet) {
+        newLockedCourses.add(course.id);
+      }
+      
+      // Lock if credit lock is not met
+      if (course.creditLock > 0 && completedCredits < course.creditLock) {
+        newLockedCourses.add(course.id);
       }
     });
     setLockedCourses(newLockedCourses);
@@ -148,9 +163,16 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
       <Card className="p-4 sm:p-6 lg:p-8 overflow-x-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold tracking-tight text-primary">Fluxograma do Currículo</h2>
-          <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-            Uma visualização interativa do currículo de Ciência da Computação. Passe o mouse sobre os cursos para ver detalhes e rastrear dependências.
-          </p>
+          <div className="flex justify-center items-center gap-4 mt-2">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Uma visualização interativa do currículo de Ciência da Computação. Clique nos cursos para ver detalhes e rastrear dependências.
+            </p>
+            {student && (
+                <div className="text-sm font-medium text-white bg-primary/80 rounded-md px-3 py-1">
+                    Créditos Totais: {totalCredits}
+                </div>
+            )}
+          </div>
         </div>
         <div ref={containerRef} className="relative">
           <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
@@ -207,6 +229,7 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
           onClose={() => setSelectedCourse(null)}
           course={selectedCourse}
           allCourses={courses}
+          totalCredits={totalCredits}
         />
       )}
     </>

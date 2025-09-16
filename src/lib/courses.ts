@@ -10,6 +10,7 @@ export type Course = {
   name: string;
   semester: number;
   credits: number;
+  creditLock: number;
   dependencies: string[];
   category: CourseCategory;
   row: number;
@@ -30,11 +31,12 @@ interface ApiCourse {
   period: string;
   type: string;
   credits: number;
+  creditLock: string;
   disciplineId: string;
   requirements: ApiRequirement[];
 }
 
-const FLOWCHART_LAYOUT: Omit<Course, 'dependencies' | 'category' | 'name' | 'credits' | 'electives' | 'apiId' | 'disciplineId'>[] = [
+const FLOWCHART_LAYOUT: Omit<Course, 'dependencies' | 'category' | 'name' | 'credits' | 'electives' | 'apiId' | 'disciplineId' | 'creditLock'>[] = [
   // Semester 1
   { id: 'IME0310814', code: 'IME03-10814', semester: 1, row: 1 },
   { id: 'IME0104827', code: 'IME01-04827', semester: 1, row: 2 },
@@ -148,6 +150,7 @@ export async function getCourses(): Promise<{ courses: Course[], semesters: numb
             name,
             semester: 0, // Not placed in a semester by default
             credits: apiCourse.credits,
+            creditLock: parseInt(apiCourse.creditLock) || 0,
             dependencies: [],
             category: getCategory(apiCourse.type),
             row: 0,
@@ -169,6 +172,7 @@ export async function getCourses(): Promise<{ courses: Course[], semesters: numb
           disciplineId: layoutCourse.id,
           name: layoutCourse.name || 'Eletiva',
           credits: 4, // Placeholder credits
+          creditLock: 0,
           dependencies: [],
           category: 'Eletiva',
           electives: electives
@@ -184,6 +188,7 @@ export async function getCourses(): Promise<{ courses: Course[], semesters: numb
           disciplineId: '',
           name: `N/A: ${layoutCourse.code}`,
           credits: 0,
+          creditLock: 0,
           dependencies: [],
           category: 'Unknown',
         };
@@ -209,6 +214,7 @@ export async function getCourses(): Promise<{ courses: Course[], semesters: numb
         disciplineId: apiCourse.disciplineId,
         name: name,
         credits: apiCourse.credits,
+        creditLock: parseInt(apiCourse.creditLock) || 0,
         dependencies: Array.from(new Set(dependencies)),
         category: getCategory(apiCourse.type),
       };

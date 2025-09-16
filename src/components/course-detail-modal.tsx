@@ -19,13 +19,14 @@ import { StudentContext, CourseStatus } from '@/contexts/student-context';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
-import { Link } from 'lucide-react';
+import { Link, Lock } from 'lucide-react';
 
 type CourseDetailModalProps = {
   isOpen: boolean;
   onClose: () => void;
   course: Course;
   allCourses: Course[];
+  totalCredits: number;
 };
 
 type ApiClassDetail = {
@@ -43,7 +44,7 @@ type ApiDisciplineDetail = {
   classes: ApiClassDetail[];
 };
 
-export function CourseDetailModal({ isOpen, onClose, course, allCourses }: CourseDetailModalProps) {
+export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCredits }: CourseDetailModalProps) {
   const [details, setDetails] = useState<ApiDisciplineDetail | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,8 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses }: Cours
     .filter(Boolean) as Course[];
   
   const areDependenciesMet = dependencies.every(dep => courseStatuses[dep.id] === 'COMPLETED');
-  const canTakeCourse = !student || dependencies.length === 0 || areDependenciesMet;
+  const areCreditsMet = course.creditLock === 0 || totalCredits >= course.creditLock;
+  const canTakeCourse = !student || (areDependenciesMet && areCreditsMet);
 
   const fetchDetails = async (signal?: AbortSignal) => {
     if (!course.disciplineId || course.isElectiveGroup) return;
@@ -156,9 +158,15 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses }: Cours
     if (course.isElectiveGroup) return;
 
     if (newStatus !== 'NOT_TAKEN' && !canTakeCourse) {
+      let description = "Você precisa concluir todos os pré-requisitos antes de cursar esta disciplina.";
+      if (!areDependenciesMet) {
+        description = "Você precisa concluir todas as disciplinas de pré-requisito antes de cursar esta.";
+      } else if (!areCreditsMet) {
+        description = `Você precisa de pelo menos ${course.creditLock} créditos concluídos para cursar esta disciplina. Você tem ${totalCredits}.`;
+      }
       toast({
         title: "Pré-requisitos não cumpridos",
-        description: "Você precisa concluir todas as disciplinas de pré-requisito antes de cursar esta.",
+        description,
         variant: "destructive"
       });
       return;
@@ -198,10 +206,12 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses }: Cours
             <h4 className="text-sm font-medium text-muted-foreground mb-2">Categoria</h4>
             <Badge variant="secondary">{course.category}</Badge>
           </div>
+
+          {(dependencies.length > 0 || course.creditLock > 0) && <Separator className="my-3" />}
+
           {dependencies.length > 0 && (
             <div>
-              <Separator className="my-3" />
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Pré-requisitos</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">Pré-requisitos (Disciplinas)</h4>
               <div className="flex flex-wrap gap-2">
                 {dependencies.map(dep => {
                     const depStatus = courseStatuses[dep.id];
@@ -213,6 +223,17 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses }: Cours
               </div>
             </div>
           )}
+          
+          {course.creditLock > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">Pré-requisitos (Créditos)</h4>
+                <Badge variant={areCreditsMet ? 'default' : 'destructive'}>
+                    <Lock className="mr-2 h-3 w-3" />
+                    Requer {course.creditLock} créditos. Você tem {totalCredits}.
+                </Badge>
+            </div>
+          )}
+
 
           <Separator className="my-3" />
 

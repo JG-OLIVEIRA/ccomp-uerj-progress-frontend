@@ -18,16 +18,17 @@ type ClassInfo = {
 };
 
 const timeSlots = [
-  { id: 'M1', label: 'M1 (07:00 - 07:50)' }, { id: 'M2', label: 'M2 (07:50 - 08:40)' },
-  { id: 'M3', label: 'M3 (08:50 - 09:40)' }, { id: 'M4', label: 'M4 (09:40 - 10:30)' },
-  { id: 'M5', label: 'M5 (10:40 - 11:30)' }, { id: 'M6', label: 'M6 (11:30 - 12:20)' },
-  { id: 'T1', label: 'T1 (12:30 - 13:20)' }, { id: 'T2', label: 'T2 (13:20 - 14:10)' },
-  { id: 'T3', label: 'T3 (14:20 - 15:10)' }, { id: 'T4', label: 'T4 (15:10 - 16:00)' },
-  { id: 'T5', label: 'T5 (16:10 - 17:00)' }, { id: 'T6', label: 'T6 (17:00 - 17:50)' },
-  { id: 'N1', label: 'N1 (18:00 - 18:50)' }, { id: 'N2', label: 'N2 (18:50 - 19:40)' },
-  { id: 'N3', label: 'N3 (19:40 - 20:30)' }, { id: 'N4', label: 'N4 (20:30 - 21:20)' },
-  { id: 'N5', label: 'N5 (21:20 - 22:10)' },
+  { id: 'M1', label: '07:00 - 07:50' }, { id: 'M2', label: '07:50 - 08:40' },
+  { id: 'M3', label: '08:50 - 09:40' }, { id: 'M4', label: '09:40 - 10:30' },
+  { id: 'M5', label: '10:40 - 11:30' }, { id: 'M6', label: '11:30 - 12:20' },
+  { id: 'T1', label: '12:30 - 13:20' }, { id: 'T2', label: '13:20 - 14:10' },
+  { id: 'T3', label: '14:20 - 15:10' }, { id: 'T4', label: '15:10 - 16:00' },
+  { id: 'T5', label: '16:10 - 17:00' }, { id: 'T6', label: '17:00 - 17:50' },
+  { id: 'N1', label: '18:00 - 18:50' }, { id: 'N2', label: '18:50 - 19:40' },
+  { id: 'N3', label: '19:40 - 20:30' }, { id: 'N4', label: '20:30 - 21:20' },
+  { id: 'N5', label: '21:20 - 22:10' },
 ];
+
 
 const daysOfWeek = [
   { id: 'SEG', label: 'Segunda' }, { id: 'TER', label: 'Terça' },
@@ -51,7 +52,7 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
   }, [allCourses, courseStatuses]);
 
   useEffect(() => {
-    if (!student || currentCourses.length === 0) {
+    if (!student) {
       setIsLoading(false);
       setSchedule({});
       return;
@@ -69,10 +70,19 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
         });
       });
 
+      // This API returns an object with `{ current: [{ disciplineId, classNumber }] }`
       const studentDisciplinesResponse = await fetch(`/api/students/${student.studentId}/disciplines`);
+      
+      if (!studentDisciplinesResponse.ok) {
+          setSchedule(newSchedule);
+          setIsLoading(false);
+          console.error("Failed to fetch student disciplines for schedule");
+          return;
+      }
+      
       const studentDisciplines = await studentDisciplinesResponse.json();
       
-      if (!studentDisciplines.current || !Array.isArray(studentDisciplines.current)) {
+      if (!studentDisciplines.current || !Array.isArray(studentDisciplines.current) || studentDisciplines.current.length === 0) {
           setSchedule(newSchedule);
           setIsLoading(false);
           return;
@@ -81,33 +91,36 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
       const currentDisciplineDetails = studentDisciplines.current as { disciplineId: string; classNumber: number }[];
       
       const coursePromises = currentDisciplineDetails.map(async (studentClass) => {
+        // Find the course in our allCourses list that matches the disciplineId
         const course = allCourses.find(c => c.disciplineId === studentClass.disciplineId && !c.isElectiveGroup);
         if(!course) return;
 
+          // Fetch details for that specific discipline to get class times
           const res = await fetch(`/api/disciplines/${course.disciplineId}`);
           if (!res.ok) return null;
           const disciplineDetails = await res.json();
           
           if (!disciplineDetails.classes) return null;
 
+          // Find the specific class the student is enrolled in
           const chosenClass = disciplineDetails.classes.find((c: any) => c.number === studentClass.classNumber);
           
           if (!chosenClass || !chosenClass.times) return;
           
-          const timeParts = chosenClass.times.split(' ').filter(Boolean);
+          // Parse the time string: "SEG N1 N2 QUA N1 N2"
+          const timeParts = chosenClass.times.trim().split(/\s+/);
 
           let currentDay: string | null = null;
           for (const part of timeParts) {
             if (dayMapping[part]) {
               currentDay = dayMapping[part];
-            } else if (currentDay) {
-              if (newSchedule[part]) {
+            } else if (currentDay && timeSlots.some(ts => ts.id === part)) { // part is a time slot like N1, N2
+                if (!newSchedule[part]) newSchedule[part] = {};
                 newSchedule[part][currentDay] = {
                   courseCode: course.code,
                   courseName: course.name,
                   classNumber: chosenClass.number,
                 };
-              }
             }
           }
         });
@@ -118,7 +131,7 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
     };
 
     fetchSchedules();
-  }, [student, currentCourses, allCourses]);
+  }, [student, courseStatuses]); // Rerun when statuses change
 
   if (!student) {
     return (
@@ -160,7 +173,7 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
           <table className="w-full border-collapse text-center text-xs sm:text-sm">
             <thead>
               <tr className="bg-muted">
-                <th className="p-2 border font-semibold">Tempo</th>
+                <th className="p-2 border font-semibold">Horário</th>
                 {daysOfWeek.map(day => (
                   <th key={day.id} className="p-2 border font-semibold min-w-[100px]">{day.label}</th>
                 ))}
@@ -169,15 +182,16 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
             <tbody>
               {timeSlots.map(ts => (
                 <tr key={ts.id}>
-                  <td className="p-2 border font-medium bg-muted">{ts.label}</td>
+                  <td className="p-2 border font-medium bg-muted whitespace-nowrap">{ts.label}</td>
                   {daysOfWeek.map(day => {
                     const classInfo = schedule[ts.id]?.[day.label];
                     return (
-                      <td key={`${ts.id}-${day.id}`} className="p-2 border h-12">
+                      <td key={`${ts.id}-${day.id}`} className="p-1 border h-14">
                         {classInfo && (
-                          <div className="bg-primary/10 p-1 rounded-md">
-                            <p className="font-bold text-primary text-xs">{classInfo.courseCode}</p>
-                            <p className="text-muted-foreground text-[10px] hidden sm:block">{classInfo.courseName}</p>
+                          <div className="bg-primary/10 p-1 rounded-md h-full flex flex-col justify-center">
+                            <p className="font-bold text-primary text-[10px] sm:text-xs">{classInfo.courseCode}</p>
+                            <p className="text-muted-foreground text-[9px] hidden sm:block leading-tight">{classInfo.courseName}</p>
+                             <p className="text-muted-foreground text-[9px] sm:text-xs">T.{classInfo.classNumber}</p>
                           </div>
                         )}
                       </td>
@@ -193,3 +207,4 @@ export function ScheduleGrid({ allCourses }: ScheduleGridProps) {
   );
 }
 
+    

@@ -8,6 +8,8 @@ import type { Course } from '@/lib/courses';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import type { CurrentDiscipline } from '@/lib/student';
+import { CourseDetailModal } from './course-detail-modal';
+
 
 const timeSlots = [
     'M1', 'M2', 'M3', 'M4', 'M5', 'M6',
@@ -19,8 +21,7 @@ const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
 const dayMapping: Record<string, string> = { 'SEG': 'Seg', 'TER': 'Ter', 'QUA': 'Qua', 'QUI': 'Qui', 'SEX': 'Sex' };
 
 type ScheduleCell = {
-    courseName: string;
-    courseCode: string;
+    course: Course;
 };
 
 type ScheduleData = Record<string, Record<string, ScheduleCell>>;
@@ -38,6 +39,8 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
     const { student } = useContext(StudentContext)!;
     const [schedule, setSchedule] = useState<ScheduleData>({});
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+    const [totalCredits, setTotalCredits] = useState(0);
 
     useEffect(() => {
         const fetchSchedules = async () => {
@@ -52,6 +55,15 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
             const currentDisciplines = student.currentDisciplines.filter(
                 (d): d is CurrentDiscipline => typeof d === 'object' && d !== null && 'disciplineId' in d && 'classNumber' in d
             );
+            
+            // Calculate total credits for the modal
+            const completedCredits = allCourses.reduce((acc, course) => {
+                if (student.completedDisciplines.includes(course.disciplineId) && !course.isElectiveGroup) {
+                    return acc + course.credits;
+                }
+                return acc;
+            }, 0);
+            setTotalCredits(completedCredits);
 
             const detailsPromises = currentDisciplines.map(d => fetchDisciplineDetails(d.disciplineId));
             const detailsResults = await Promise.all(detailsPromises);
@@ -67,21 +79,21 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                 if (!classInfo || !classInfo.times) return;
 
                 const courseInfo = allCourses.find(c => c.disciplineId === currentDiscipline.disciplineId);
-                const courseName = courseInfo?.name || detail.name;
-                const courseCode = courseInfo?.code || '';
 
-                const timeParts = classInfo.times.trim().split(/\s+/);
-                let currentDay: string | null = null;
+                if (courseInfo) {
+                    const timeParts = classInfo.times.trim().split(/\s+/);
+                    let currentDay: string | null = null;
 
-                for(const part of timeParts) {
-                    const upperPart = part.toUpperCase();
-                    if(dayMapping[upperPart]) {
-                        currentDay = dayMapping[upperPart];
-                    } else if (currentDay) {
-                        if(!newSchedule[currentDay]) {
-                            newSchedule[currentDay] = {};
+                    for(const part of timeParts) {
+                        const upperPart = part.toUpperCase();
+                        if(dayMapping[upperPart]) {
+                            currentDay = dayMapping[upperPart];
+                        } else if (currentDay) {
+                            if(!newSchedule[currentDay]) {
+                                newSchedule[currentDay] = {};
+                            }
+                            newSchedule[currentDay][part] = { course: courseInfo };
                         }
-                        newSchedule[currentDay][part] = { courseName, courseCode };
                     }
                 }
             });
@@ -115,36 +127,50 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
     }
 
     return (
-        <Card className="w-full mx-auto mt-8 overflow-x-auto">
-            <CardHeader>
-                <CardTitle className="text-lg text-center">Grade Horária</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-[auto,repeat(5,1fr)] gap-px bg-border">
-                    {/* Header Row */}
-                    <div className="p-2 bg-card font-semibold text-center">Horário</div>
-                    {days.map(day => (
-                        <div key={day} className="p-2 bg-card font-semibold text-center">{day}</div>
-                    ))}
+        <>
+            <Card className="w-full mx-auto mt-8 overflow-x-auto">
+                <CardHeader>
+                    <CardTitle className="text-lg text-center">Grade Horária</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-[auto,repeat(5,1fr)] gap-px bg-border">
+                        {/* Header Row */}
+                        <div className="p-2 bg-card font-semibold text-center">Horário</div>
+                        {days.map(day => (
+                            <div key={day} className="p-2 bg-card font-semibold text-center">{day}</div>
+                        ))}
 
-                    {/* Time Slot Rows */}
-                    {timeSlots.map(slot => (
-                        <React.Fragment key={slot}>
-                            <div className="p-2 bg-card font-semibold text-center">{slot}</div>
-                            {days.map(day => (
-                                <div key={`${day}-${slot}`} className="p-2 bg-card min-h-[60px] text-xs">
-                                    {schedule[day]?.[slot] && (
-                                        <div className="bg-primary/20 text-primary-foreground p-1 rounded-md h-full flex flex-col justify-center text-center">
-                                            <p className="font-semibold text-foreground text-[11px] leading-tight">{schedule[day][slot].courseName}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </React.Fragment>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                        {/* Time Slot Rows */}
+                        {timeSlots.map(slot => (
+                            <React.Fragment key={slot}>
+                                <div className="p-2 bg-card font-semibold text-center">{slot}</div>
+                                {days.map(day => (
+                                    <div key={`${day}-${slot}`} className="p-2 bg-card min-h-[60px] text-xs">
+                                        {schedule[day]?.[slot] && (
+                                            <div 
+                                                className="bg-primary/20 text-primary-foreground p-1 rounded-md h-full flex flex-col justify-center text-center cursor-pointer hover:bg-primary/30 transition-colors"
+                                                onClick={() => setSelectedCourse(schedule[day][slot].course)}
+                                            >
+                                                <p className="font-semibold text-foreground text-[11px] leading-tight">{schedule[day][slot].course.name}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+            {selectedCourse && (
+                <CourseDetailModal
+                    isOpen={!!selectedCourse}
+                    onClose={() => setSelectedCourse(null)}
+                    course={selectedCourse}
+                    allCourses={allCourses}
+                    totalCredits={totalCredits}
+                />
+            )}
+        </>
     );
 }
 

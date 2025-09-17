@@ -63,13 +63,14 @@ function normalizeClassTimes(times: string): string {
     let currentDay = '';
 
     for (const part of parts) {
-        if (dayMapping[part]) {
-            if (currentDay) { // If we're already processing a day, this is a new one
+        const upperPart = part.toUpperCase();
+        if (dayMapping[upperPart]) {
+            if (result) {
                 result += ' / ';
             }
-            currentDay = dayMapping[part];
+            currentDay = dayMapping[upperPart];
             result += `${currentDay}`;
-        } else { // This is a time slot
+        } else if (currentDay) {
             result += ` ${part}`;
         }
     }
@@ -205,9 +206,25 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
       return;
     }
 
+    let classNumber: number | undefined;
+    if (newStatus === 'CURRENT') {
+      if (!details?.classes || details.classes.length === 0) {
+        toast({
+          title: "Não é possível cursar",
+          description: "Não há turmas disponíveis para esta disciplina.",
+          variant: "destructive"
+        });
+        return;
+      }
+      // Automatically select the first class if multiple are available.
+      // A better UX would be to let the user choose.
+      classNumber = details.classes[0].number;
+    }
+
+
     setIsUpdatingStatus(true);
     try {
-      await updateCourseStatus(course, newStatus, currentStatus, allCourses);
+      await updateCourseStatus(course, newStatus, currentStatus, allCourses, classNumber);
       toast({
         title: "Sucesso!",
         description: `Status de "${course.name}" atualizado.`,

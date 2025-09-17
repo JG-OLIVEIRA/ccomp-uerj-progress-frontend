@@ -6,6 +6,7 @@ import type { Course, CourseIdMapping } from "@/lib/courses";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
 import { RequirementsSummary } from "@/components/requirements-summary";
+import { ScheduleGrid } from "@/components/schedule-grid";
 
 type FlowchartData = {
   courses: Course[];
@@ -21,6 +22,7 @@ async function FlowchartLoader() {
       <main className="flex-1 container mx-auto p-4 sm:p-6 md:p-8 space-y-8">
         <CourseFlowchart initialCourses={courses} initialSemesters={semesters} idMapping={idMapping} />
         <RequirementsSummary allCourses={courses} />
+        <ScheduleGrid allCourses={courses} />
       </main>
     </>
   );

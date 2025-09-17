@@ -3,7 +3,7 @@
 
 import { createContext, useState, useCallback, ReactNode } from "react";
 import { getStudent, updateStudentCourseStatus } from "@/lib/student";
-import type { Student } from "@/lib/student";
+import type { Student, CurrentDiscipline } from "@/lib/student";
 import { useToast } from "@/hooks/use-toast";
 import type { CourseIdMapping, Course } from "@/lib/courses";
 
@@ -19,7 +19,7 @@ interface StudentContextType {
     courseStatuses: Record<string, CourseStatus>;
     isLoading: boolean;
     fetchStudentData: (studentId: string, allCourses: Course[]) => Promise<void>;
-    updateCourseStatus: (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[]) => Promise<void>;
+    updateCourseStatus: (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[], classNumber?: number) => Promise<void>;
     logout: () => void;
     setCourseIdMapping: (mapping: CourseIdMapping) => void;
 }
@@ -59,7 +59,8 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 }
             });
 
-            (studentData.currentDisciplines || []).forEach(disciplineId => {
+            (studentData.currentDisciplines || []).forEach(currentDiscipline => {
+                const disciplineId = typeof currentDiscipline === 'string' ? currentDiscipline : currentDiscipline.disciplineId;
                 const courseId = disciplineIdToCourseId[disciplineId];
                 if (courseId) {
                     statuses[courseId] = 'CURRENT';
@@ -101,11 +102,11 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         }
     }, [toast, courseIdMapping]);
 
-    const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[]) => {
+    const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[], classNumber?: number) => {
         if (!student) throw new Error("Estudante não está logado.");
         if (newStatus === oldStatus) return;
 
-        await updateStudentCourseStatus(student.studentId, course.disciplineId, newStatus, oldStatus);
+        await updateStudentCourseStatus(student.studentId, course.disciplineId, newStatus, oldStatus, classNumber);
         
         await fetchStudentData(student.studentId, allCourses);
     };

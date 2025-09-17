@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import type { CurrentDiscipline } from '@/lib/student';
 
 const timeSlots = [
-    'M1', 'M2', 'M3', 'M4', 'M5',
-    'T1', 'T2', 'T3', 'T4', 'T5',
-    'N1', 'N2', 'N3', 'N4', 'N5'
+    'M1', 'M2', 'M3', 'M4', 'M5', 'M6',
+    'T1', 'T2', 'T3', 'T4', 'T5', 'T6',
+    'N1', 'N2', 'N3', 'N4', 'N5', 'N6'
 ];
 
 const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];

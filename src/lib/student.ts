@@ -81,12 +81,15 @@ async function setCourseCurrent(studentId: string, disciplineId: string, classNu
 
 
 export async function updateStudentCourseStatus(studentId: string, disciplineId: string, newStatus: CourseStatus, oldStatus: CourseStatus, classNumber?: number): Promise<void> {
-    
+    if (!studentId) {
+        throw new Error("ID do estudante não encontrado. Faça o login novamente.");
+    }
+
     // We remove from the old list first
     if (oldStatus === 'COMPLETED') {
         await setCourseCompleted(studentId, disciplineId, 'DELETE');
     }
-    // Removing from 'CURRENT' is more complex as it requires the class number.
+    // Removing from 'CURRENT' is complex as it requires the class number.
     // Instead of handling it here, we rely on the fact that `fetchStudentData` will be called
     // immediately after this, which will re-sync the entire state from the backend.
     // The backend is the source of truth. When we add the discipline to a new list (e.g., 'COMPLETED'),
@@ -94,13 +97,11 @@ export async function updateStudentCourseStatus(studentId: string, disciplineId:
     // If we change from CURRENT to NOT_TAKEN, the DELETE operation for the specific class is required.
     
     if (oldStatus === 'CURRENT') {
-        // Find the student's current class for this discipline to delete it.
-        // This is tricky without the full student object. The context will re-fetch,
-        // but for a clean state change, we should delete the specific class enrollment.
-        // Let's assume the backend handles this if we just PUT to a new status.
-        // For a status change to 'NOT_TAKEN', we MUST delete from current.
-        // The API for that needs the class number. We will rely on re-fetching for now.
-        // This is a simplification. A more robust implementation would pass the old class number.
+        // To change from 'CURRENT' to something else, we need to know which class the student was in.
+        // This is a simplification. A more robust implementation would pass the old class number or fetch it.
+        // For now, we rely on the re-fetch from `fetchStudentData` to clear the old 'CURRENT' status
+        // after the new status is set on the backend.
+        // The backend should ideally handle this atomicity.
     }
 
 
@@ -116,4 +117,3 @@ export async function updateStudentCourseStatus(studentId: string, disciplineId:
     }
     // If newStatus is 'NOT_TAKEN', we've already removed it from other lists and just need to re-fetch.
 }
-

@@ -73,8 +73,9 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                 let currentDay: string | null = null;
 
                 for(const part of timeParts) {
-                    if(dayMapping[part.toUpperCase()]) {
-                        currentDay = dayMapping[part.toUpperCase()];
+                    const upperPart = part.toUpperCase();
+                    if(dayMapping[upperPart]) {
+                        currentDay = dayMapping[upperPart];
                     } else if (currentDay) {
                         if(!newSchedule[currentDay]) {
                             newSchedule[currentDay] = {};
@@ -127,7 +128,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
 
                     {/* Time Slot Rows */}
                     {timeSlots.map(slot => (
-                        <>
+                        <React.Fragment key={slot}>
                             <div key={`${slot}-label`} className="p-2 bg-card font-semibold text-center">{slot}</div>
                             {days.map(day => (
                                 <div key={`${day}-${slot}`} className="p-2 bg-card min-h-[60px] text-xs">
@@ -139,7 +140,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                                     )}
                                 </div>
                             ))}
-                        </>
+                        </React.Fragment>
                     ))}
                 </div>
             </CardContent>

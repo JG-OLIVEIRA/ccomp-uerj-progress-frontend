@@ -10,8 +10,8 @@ import type { CurrentDiscipline } from '@/lib/student';
 
 const timeSlots = [
     'M1', 'M2', 'M3', 'M4', 'M5', 'M6',
-    'T1', 'T2', 'T3', 'T4', 'T5', 'T6',
-    'N1', 'N2', 'N3', 'N4', 'N5', 'N6'
+    'T1', 'T2', 'T3', 'T4', 'T5',
+    'N1', 'N2', 'N3', 'N4', 'N5'
 ];
 
 const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
@@ -129,7 +129,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                     {/* Time Slot Rows */}
                     {timeSlots.map(slot => (
                         <React.Fragment key={slot}>
-                            <div key={`${slot}-label`} className="p-2 bg-card font-semibold text-center">{slot}</div>
+                            <div className="p-2 bg-card font-semibold text-center">{slot}</div>
                             {days.map(day => (
                                 <div key={`${day}-${slot}`} className="p-2 bg-card min-h-[60px] text-xs">
                                     {schedule[day]?.[slot] && (

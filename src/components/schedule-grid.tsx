@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { StudentContext } from '@/contexts/student-context';
 import type { Course } from '@/lib/courses';
 import { Skeleton } from './ui/skeleton';

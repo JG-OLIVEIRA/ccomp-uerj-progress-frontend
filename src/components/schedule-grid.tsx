@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState, useContext } from 'react';
@@ -100,7 +101,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
         return <ScheduleSkeleton />;
     }
     
-    if (Object.keys(schedule).length === 0) {
+    if (Object.keys(schedule).length === 0 && !isLoading) {
         return (
             <Card className="w-full mx-auto mt-8">
                 <CardHeader>
@@ -133,9 +134,8 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                             {days.map(day => (
                                 <div key={`${day}-${slot}`} className="p-2 bg-card min-h-[60px] text-xs">
                                     {schedule[day]?.[slot] && (
-                                        <div className="bg-primary/20 text-primary-foreground p-1 rounded-md h-full flex flex-col justify-center">
-                                            <p className="font-bold text-foreground text-[10px] leading-tight">{schedule[day][slot].courseCode}</p>
-                                            <p className="text-muted-foreground text-[10px] leading-tight">{schedule[day][slot].courseName}</p>
+                                        <div className="bg-primary/20 text-primary-foreground p-1 rounded-md h-full flex flex-col justify-center text-center">
+                                            <p className="font-semibold text-foreground text-[11px] leading-tight">{schedule[day][slot].courseName}</p>
                                         </div>
                                     )}
                                 </div>
@@ -158,7 +158,7 @@ function ScheduleSkeleton() {
                 <div className="grid grid-cols-[auto,repeat(5,1fr)] gap-1">
                     <Skeleton className="h-10" />
                     {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
-                    {Array.from({ length: 15 * 6 }).map((_, i) => <Skeleton key={i} className="h-16" />)}
+                    {Array.from({ length: 16 * 6 }).map((_, i) => <Skeleton key={i} className="h-16" />)}
                 </div>
             </CardContent>
         </Card>

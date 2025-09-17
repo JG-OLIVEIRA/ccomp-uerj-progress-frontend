@@ -67,19 +67,42 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 }
             });
 
-            // Determine status of elective groups
-            allCourses.forEach(course => {
-                if (course.isElectiveGroup && course.electives) {
-                    const hasCurrent = course.electives.some(elective => statuses[elective.id] === 'CURRENT');
-                    const hasCompleted = course.electives.some(elective => statuses[elective.id] === 'COMPLETED');
-                    
-                    if (hasCurrent) {
-                        statuses[course.id] = 'CURRENT';
-                    } else if (hasCompleted) {
-                        statuses[course.id] = 'COMPLETED';
-                    }
+            // Handle Elective Group Status Logic
+            const electiveGroups = allCourses.filter(c => c.isElectiveGroup);
+            const basicElectiveGroup = electiveGroups.find(g => g.id === 'ELETIVABASICA');
+            const groupIIElectiveSlots = ['ELETIVAI', 'ELETIVAII', 'ELETIVAIII', 'ELETIVAIV']
+                .map(id => allCourses.find(c => c.id === id))
+                .filter((c): c is Course => !!c);
+
+            // Handle Basic Electives
+            if (basicElectiveGroup && basicElectiveGroup.electives) {
+                const hasCurrent = basicElectiveGroup.electives.some(e => statuses[e.id] === 'CURRENT');
+                const hasCompleted = basicElectiveGroup.electives.some(e => statuses[e.id] === 'COMPLETED');
+                if (hasCurrent) {
+                    statuses[basicElectiveGroup.id] = 'CURRENT';
+                } else if (hasCompleted) {
+                    statuses[basicElectiveGroup.id] = 'COMPLETED';
                 }
-            });
+            }
+            
+            // Handle Group II Electives Sequentially
+            const allGroupIIElectives = allCourses.find(c => c.id === 'ELETIVAI')?.electives || [];
+            
+            const completedGroupII = allGroupIIElectives.filter(e => statuses[e.id] === 'COMPLETED');
+            const currentGroupII = allGroupIIElectives.filter(e => statuses[e.id] === 'CURRENT');
+
+            for (const slot of groupIIElectiveSlots) {
+                if (completedGroupII.length > 0) {
+                    statuses[slot.id] = 'COMPLETED';
+                    completedGroupII.shift(); // Consume one completed elective
+                } else if (currentGroupII.length > 0) {
+                    statuses[slot.id] = 'CURRENT';
+                    currentGroupII.shift(); // Consume one current elective
+                } else {
+                    statuses[slot.id] = 'NOT_TAKEN'; // Or keep as is if already set
+                }
+            }
+
 
             setCourseStatuses(statuses);
             

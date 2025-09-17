@@ -11,6 +11,12 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Skeleton } from './ui/skeleton';
@@ -19,7 +25,7 @@ import { StudentContext, CourseStatus } from '@/contexts/student-context';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
-import { Link, Lock } from 'lucide-react';
+import { Link, Lock, ChevronDown } from 'lucide-react';
 
 type CourseDetailModalProps = {
   isOpen: boolean;
@@ -59,22 +65,24 @@ function normalizeClassTimes(times: string): string {
         'SEG': 'Seg', 'TER': 'Ter', 'QUA': 'Qua', 'QUI': 'Qui', 'SEX': 'Sex', 'SAB': 'Sáb'
     };
     const parts = times.trim().split(/\s+/);
-    let result = '';
     let currentDay = '';
+    let dayHorarios: Record<string, string[]> = {};
 
     for (const part of parts) {
         const upperPart = part.toUpperCase();
         if (dayMapping[upperPart]) {
-            if (result) {
-                result += ' / ';
-            }
             currentDay = dayMapping[upperPart];
-            result += `${currentDay}`;
+            if(!dayHorarios[currentDay]) {
+                dayHorarios[currentDay] = [];
+            }
         } else if (currentDay) {
-            result += ` ${part}`;
+            dayHorarios[currentDay].push(part);
         }
     }
-    return result;
+    
+    return Object.entries(dayHorarios)
+        .map(([day, times]) => `${day} ${times.join(' ')}`)
+        .join(' / ');
 }
 
 
@@ -180,7 +188,7 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
     }
   }
 
-  const handleStatusChange = async (newStatus: CourseStatus) => {
+  const handleStatusChange = async (newStatus: CourseStatus, classNumber?: number) => {
     if (!student) {
       toast({
         title: "Ação necessária",
@@ -206,19 +214,28 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
       return;
     }
 
-    let classNumber: number | undefined;
     if (newStatus === 'CURRENT') {
-      if (!details?.classes || details.classes.length === 0) {
-        toast({
-          title: "Não é possível cursar",
-          description: "Não há turmas disponíveis para esta disciplina.",
-          variant: "destructive"
-        });
-        return;
+      if (classNumber === undefined) {
+         if (!details?.classes || details.classes.length === 0) {
+            toast({
+              title: "Não é possível cursar",
+              description: "Não há turmas disponíveis para esta disciplina.",
+              variant: "destructive"
+            });
+            return;
+          }
+          if (details.classes.length === 1) {
+            classNumber = details.classes[0].number;
+          } else {
+             // This case is handled by the DropdownMenu logic, so it shouldn't be reached.
+             toast({
+                title: "Seleção necessária",
+                description: "Por favor, selecione uma turma para cursar.",
+                variant: "destructive"
+             });
+             return;
+          }
       }
-      // Automatically select the first class if multiple are available.
-      // A better UX would be to let the user choose.
-      classNumber = details.classes[0].number;
     }
 
 
@@ -346,15 +363,35 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
               >
                 Concluída
               </Button>
-              <Button 
-                size="sm" 
-                variant={currentStatus === 'CURRENT' ? 'default' : 'outline'}
-                onClick={() => handleStatusChange('CURRENT')}
-                disabled={isUpdatingStatus || currentStatus === 'CURRENT' || !canTakeCourse}
-                title={!canTakeCourse ? "Cumpra os pré-requisitos para cursar" : ""}
-              >
-                Cursando
-              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    variant={currentStatus === 'CURRENT' ? 'default' : 'outline'}
+                    disabled={isUpdatingStatus || currentStatus === 'CURRENT' || !canTakeCourse || isLoadingDetails}
+                    title={!canTakeCourse ? "Cumpra os pré-requisitos para cursar" : ""}
+                  >
+                    Cursar...
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {!details || details.classes.length === 0 ? (
+                    <DropdownMenuItem disabled>Nenhuma turma disponível</DropdownMenuItem>
+                  ) : (
+                    details.classes.map(cls => (
+                      <DropdownMenuItem 
+                        key={cls.number}
+                        onClick={() => handleStatusChange('CURRENT', cls.number)}
+                      >
+                        Cursar Turma {cls.number}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button 
                 size="sm" 
                 variant={currentStatus === 'NOT_TAKEN' ? 'default' : 'outline'}
@@ -370,3 +407,5 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
     </Dialog>
   );
 }
+
+    

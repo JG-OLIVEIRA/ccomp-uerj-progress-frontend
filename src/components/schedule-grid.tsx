@@ -8,6 +8,7 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import type { CurrentDiscipline } from '@/lib/student';
 import { CourseDetailModal } from './course-detail-modal';
+import { cn } from '@/lib/utils';
 
 
 const timeSlots = [
@@ -34,6 +35,30 @@ const fetchDisciplineDetails = async (disciplineId: string) => {
     }
     return res.json();
 };
+
+const colorClasses = [
+    "bg-chart-1/20 hover:bg-chart-1/30 text-chart-1",
+    "bg-chart-2/20 hover:bg-chart-2/30 text-chart-2",
+    "bg-chart-3/20 hover:bg-chart-3/30 text-chart-3",
+    "bg-chart-4/20 hover:bg-chart-4/30 text-chart-4",
+    "bg-chart-5/20 hover:bg-chart-5/30 text-chart-5",
+    "bg-blue-500/20 hover:bg-blue-500/30 text-blue-500",
+    "bg-purple-500/20 hover:bg-purple-500/30 text-purple-500",
+    "bg-pink-500/20 hover:bg-pink-500/30 text-pink-500",
+];
+
+// Simple hash function to get a consistent color for a course
+const getColorForCourse = (courseId: string) => {
+    let hash = 0;
+    for (let i = 0; i < courseId.length; i++) {
+        const char = courseId.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    const index = Math.abs(hash) % colorClasses.length;
+    return colorClasses[index];
+};
+
 
 export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
     const { student } = useContext(StudentContext)!;
@@ -159,7 +184,10 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                                     <div key={`${day}-${slot}`} className="p-2 bg-card min-h-[60px] text-xs">
                                         {schedule[day]?.[slot] && (
                                             <div 
-                                                className="bg-primary/20 text-primary-foreground p-1 rounded-md h-full flex flex-col justify-center text-center cursor-pointer hover:bg-primary/30 transition-colors"
+                                                className={cn(
+                                                    "p-1 rounded-md h-full flex flex-col justify-center text-center cursor-pointer transition-colors",
+                                                    getColorForCourse(schedule[day][slot].course.id)
+                                                )}
                                                 onClick={() => handleCellClick(schedule[day][slot])}
                                             >
                                                 <p className="font-semibold text-foreground text-[11px] leading-tight">{schedule[day][slot].course.name}</p>

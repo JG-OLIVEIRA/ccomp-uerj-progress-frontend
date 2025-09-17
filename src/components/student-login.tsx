@@ -19,10 +19,11 @@ export function StudentLogin({ allCourses }: { allCourses: any[] }) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!studentId) {
+        const matriculaRegex = /^\d{12}$/;
+        if (!studentId || !matriculaRegex.test(studentId)) {
             toast({
-                title: 'Erro',
-                description: 'Por favor, insira sua matrícula.',
+                title: 'Matrícula Inválida',
+                description: 'Por favor, insira uma matrícula válida com 12 dígitos.',
                 variant: 'destructive',
             });
             return;

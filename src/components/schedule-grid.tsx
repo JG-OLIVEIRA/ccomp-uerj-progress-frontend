@@ -59,6 +59,26 @@ const getColorForCourse = (courseId: string) => {
     return colorClasses[index];
 };
 
+const findCourseByDisciplineId = (allCourses: Course[], disciplineId: string): Course | undefined => {
+    // First, search in the main course list
+    const mainCourse = allCourses.find(c => c.disciplineId === disciplineId);
+    if (mainCourse) {
+        return mainCourse;
+    }
+
+    // If not found, search within elective groups
+    for (const course of allCourses) {
+        if (course.isElectiveGroup && course.electives) {
+            const electiveCourse = course.electives.find(e => e.disciplineId === disciplineId);
+            if (electiveCourse) {
+                return electiveCourse;
+            }
+        }
+    }
+
+    return undefined;
+};
+
 
 export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
     const { student } = useContext(StudentContext)!;
@@ -104,7 +124,8 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                 
                 if (!classInfo || !classInfo.times) return;
 
-                const courseInfo = allCourses.find(c => c.disciplineId === currentDiscipline.disciplineId);
+                const courseInfo = findCourseByDisciplineId(allCourses, currentDiscipline.disciplineId);
+
 
                 if (courseInfo) {
                     const timeParts = classInfo.times.trim().split(/\s+/);

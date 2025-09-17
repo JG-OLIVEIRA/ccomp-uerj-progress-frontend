@@ -113,8 +113,12 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
     setError(null);
     try {
         let url: string;
+        // This is a proxy route to avoid CORS issues and to hide the external API URL
+        // We will need to create this route in our Next.js app
         if (enrolledClassNumber !== undefined) {
-            url = `/api/disciplines/${course.disciplineId}/classes/${enrolledClassNumber}`;
+             // We don't have a direct API for a single class, so we fetch all and filter
+             // This can be optimized if the backend provides a dedicated endpoint
+            url = `/api/disciplines/${course.disciplineId}`;
         } else {
             url = `/api/disciplines/${course.disciplineId}`;
         }
@@ -125,17 +129,17 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
             throw new Error(errorData?.error || 'Falha ao buscar os detalhes da disciplina');
         }
       
-        let data;
+        let data: ApiDisciplineDetail = await response.json();
+        
+        // If we are enrolled, we only want to show that specific class
         if (enrolledClassNumber !== undefined) {
-            // API for a single class returns the class object directly
-            const classData: ApiClassDetail = await response.json();
-            // We need to reconstruct the ApiDisciplineDetail structure
-            data = {
-                ...course, // use base course data
-                classes: [classData]
-            };
-        } else {
-            data = await response.json();
+            const enrolledClass = data.classes.find(c => c.number === enrolledClassNumber);
+            if (enrolledClass) {
+                data.classes = [enrolledClass];
+            } else {
+                // This case should ideally not happen if data is consistent
+                console.warn(`Turma matriculada ${enrolledClassNumber} não encontrada para a disciplina ${course.disciplineId}`);
+            }
         }
 
         setDetails(data);

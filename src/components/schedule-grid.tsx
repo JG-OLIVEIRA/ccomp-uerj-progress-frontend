@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useContext } from 'react';
@@ -22,6 +21,7 @@ const dayMapping: Record<string, string> = { 'SEG': 'Seg', 'TER': 'Ter', 'QUA': 
 
 type ScheduleCell = {
     course: Course;
+    classNumber: number;
 };
 
 type ScheduleData = Record<string, Record<string, ScheduleCell>>;
@@ -40,6 +40,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
     const [schedule, setSchedule] = useState<ScheduleData>({});
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+    const [selectedClassNumber, setSelectedClassNumber] = useState<number | undefined>(undefined);
     const [totalCredits, setTotalCredits] = useState(0);
 
     useEffect(() => {
@@ -56,9 +57,9 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                 (d): d is CurrentDiscipline => typeof d === 'object' && d !== null && 'disciplineId' in d && 'classNumber' in d
             );
             
-            // Calculate total credits for the modal
             const completedCredits = allCourses.reduce((acc, course) => {
-                if (student.completedDisciplines.includes(course.disciplineId) && !course.isElectiveGroup) {
+                const isCompleted = student.completedDisciplines.some(completedId => completedId === course.disciplineId);
+                if (isCompleted && !course.isElectiveGroup) {
                     return acc + course.credits;
                 }
                 return acc;
@@ -92,7 +93,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                             if(!newSchedule[currentDay]) {
                                 newSchedule[currentDay] = {};
                             }
-                            newSchedule[currentDay][part] = { course: courseInfo };
+                            newSchedule[currentDay][part] = { course: courseInfo, classNumber: currentDiscipline.classNumber };
                         }
                     }
                 }
@@ -104,6 +105,16 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
 
         fetchSchedules();
     }, [student, allCourses]);
+
+    const handleCellClick = (cell: ScheduleCell) => {
+        setSelectedCourse(cell.course);
+        setSelectedClassNumber(cell.classNumber);
+    };
+
+    const handleCloseModal = () => {
+        setSelectedCourse(null);
+        setSelectedClassNumber(undefined);
+    }
 
     if (!student) {
         return null; // Don't show anything if not logged in
@@ -149,7 +160,7 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                                         {schedule[day]?.[slot] && (
                                             <div 
                                                 className="bg-primary/20 text-primary-foreground p-1 rounded-md h-full flex flex-col justify-center text-center cursor-pointer hover:bg-primary/30 transition-colors"
-                                                onClick={() => setSelectedCourse(schedule[day][slot].course)}
+                                                onClick={() => handleCellClick(schedule[day][slot])}
                                             >
                                                 <p className="font-semibold text-foreground text-[11px] leading-tight">{schedule[day][slot].course.name}</p>
                                             </div>
@@ -164,10 +175,11 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
             {selectedCourse && (
                 <CourseDetailModal
                     isOpen={!!selectedCourse}
-                    onClose={() => setSelectedCourse(null)}
+                    onClose={handleCloseModal}
                     course={selectedCourse}
                     allCourses={allCourses}
                     totalCredits={totalCredits}
+                    enrolledClassNumber={selectedClassNumber}
                 />
             )}
         </>

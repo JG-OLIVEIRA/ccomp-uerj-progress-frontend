@@ -33,6 +33,7 @@ type CourseDetailModalProps = {
   course: Course;
   allCourses: Course[];
   totalCredits: number;
+  enrolledClassNumber?: number; // New prop
 };
 
 type ApiClassDetail = {
@@ -86,7 +87,7 @@ function normalizeClassTimes(times: string): string {
 }
 
 
-export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCredits }: CourseDetailModalProps) {
+export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCredits, enrolledClassNumber }: CourseDetailModalProps) {
   const [details, setDetails] = useState<ApiDisciplineDetail | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,21 +112,41 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
     setIsLoadingDetails(true);
     setError(null);
     try {
-      const response = await fetch(`/api/disciplines/${course.disciplineId}`, { signal });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Falha ao buscar os detalhes da disciplina');
-      }
-      const data: ApiDisciplineDetail = await response.json();
-      setDetails(data);
-      
-      const initialLinks: Record<number, string> = {};
-      data.classes?.forEach(cls => {
-        if(cls.whatsappGroup) {
-          initialLinks[cls.number] = cls.whatsappGroup;
+        let url: string;
+        if (enrolledClassNumber !== undefined) {
+            url = `/api/disciplines/${course.disciplineId}/classes/${enrolledClassNumber}`;
+        } else {
+            url = `/api/disciplines/${course.disciplineId}`;
         }
-      });
-      setWhatsappLinks(initialLinks);
+      
+        const response = await fetch(url, { signal });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.error || 'Falha ao buscar os detalhes da disciplina');
+        }
+      
+        let data;
+        if (enrolledClassNumber !== undefined) {
+            // API for a single class returns the class object directly
+            const classData: ApiClassDetail = await response.json();
+            // We need to reconstruct the ApiDisciplineDetail structure
+            data = {
+                ...course, // use base course data
+                classes: [classData]
+            };
+        } else {
+            data = await response.json();
+        }
+
+        setDetails(data);
+      
+        const initialLinks: Record<number, string> = {};
+        data.classes?.forEach((cls: ApiClassDetail) => {
+            if(cls.whatsappGroup) {
+                initialLinks[cls.number] = cls.whatsappGroup;
+            }
+        });
+        setWhatsappLinks(initialLinks);
 
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -153,7 +174,7 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
     return () => {
       controller.abort();
     };
-  }, [isOpen, course.disciplineId, course.isElectiveGroup]);
+  }, [isOpen, course.disciplineId, course.isElectiveGroup, enrolledClassNumber]);
 
   const handleWhatsappLinkChange = (classNumber: number, value: string) => {
     setWhatsappLinks(prev => ({...prev, [classNumber]: value}));
@@ -314,39 +335,71 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             {details && details.classes && details.classes.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full">
-                    {details.classes.map((cls) => (
-                        <AccordionItem value={`turma-${cls.number}`} key={cls.number}>
-                            <AccordionTrigger>Turma {cls.number}</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="text-sm space-y-3">
-                                    <p><span className="font-semibold">Professor(a):</span> {normalizeTeacherName(cls.teacher)}</p>
-                                    <p><span className="font-semibold">Horários:</span> {normalizeClassTimes(cls.times)}</p>
-                                    {cls.whatsappGroup ? (
-                                      <div className='flex items-center gap-2'>
-                                        <Link className='h-4 w-4'/>
-                                        <a href={cls.whatsappGroup} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                          Acessar grupo do WhatsApp
-                                        </a>
-                                      </div>
-                                    ) : (
-                                       <p className="text-xs text-muted-foreground">Nenhum grupo de WhatsApp cadastrado.</p>
-                                    )}
-                                    <div className="flex gap-2 items-center pt-2">
-                                      <Input 
-                                        type="url"
-                                        placeholder="Cole o link do grupo de WhatsApp aqui"
-                                        value={whatsappLinks[cls.number] || ''}
-                                        onChange={(e) => handleWhatsappLinkChange(cls.number, e.target.value)}
-                                        className="h-8 text-xs"
-                                      />
-                                      <Button size="sm" className="h-8" onClick={() => handleWhatsappLinkSubmit(cls.number)}>Salvar</Button>
+                enrolledClassNumber !== undefined ? (
+                    // Display for a single, specific class
+                     details.classes.map((cls) => (
+                        <div key={cls.number} className="text-sm space-y-3 p-1">
+                            <p className="font-bold text-base">Turma {cls.number}</p>
+                            <p><span className="font-semibold">Professor(a):</span> {normalizeTeacherName(cls.teacher)}</p>
+                            <p><span className="font-semibold">Horários:</span> {normalizeClassTimes(cls.times)}</p>
+                            {cls.whatsappGroup ? (
+                              <div className='flex items-center gap-2'>
+                                <Link className='h-4 w-4'/>
+                                <a href={cls.whatsappGroup} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                  Acessar grupo do WhatsApp
+                                </a>
+                              </div>
+                            ) : (
+                               <p className="text-xs text-muted-foreground">Nenhum grupo de WhatsApp cadastrado.</p>
+                            )}
+                            <div className="flex gap-2 items-center pt-2">
+                              <Input 
+                                type="url"
+                                placeholder="Cole o link do grupo de WhatsApp aqui"
+                                value={whatsappLinks[cls.number] || ''}
+                                onChange={(e) => handleWhatsappLinkChange(cls.number, e.target.value)}
+                                className="h-8 text-xs"
+                              />
+                              <Button size="sm" className="h-8" onClick={() => handleWhatsappLinkSubmit(cls.number)}>Salvar</Button>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    // Accordion for multiple classes
+                    <Accordion type="single" collapsible className="w-full">
+                        {details.classes.map((cls) => (
+                            <AccordionItem value={`turma-${cls.number}`} key={cls.number}>
+                                <AccordionTrigger>Turma {cls.number}</AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="text-sm space-y-3">
+                                        <p><span className="font-semibold">Professor(a):</span> {normalizeTeacherName(cls.teacher)}</p>
+                                        <p><span className="font-semibold">Horários:</span> {normalizeClassTimes(cls.times)}</p>
+                                        {cls.whatsappGroup ? (
+                                          <div className='flex items-center gap-2'>
+                                            <Link className='h-4 w-4'/>
+                                            <a href={cls.whatsappGroup} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                              Acessar grupo do WhatsApp
+                                            </a>
+                                          </div>
+                                        ) : (
+                                           <p className="text-xs text-muted-foreground">Nenhum grupo de WhatsApp cadastrado.</p>
+                                        )}
+                                        <div className="flex gap-2 items-center pt-2">
+                                          <Input 
+                                            type="url"
+                                            placeholder="Cole o link do grupo de WhatsApp aqui"
+                                            value={whatsappLinks[cls.number] || ''}
+                                            onChange={(e) => handleWhatsappLinkChange(cls.number, e.target.value)}
+                                            className="h-8 text-xs"
+                                          />
+                                          <Button size="sm" className="h-8" onClick={() => handleWhatsappLinkSubmit(cls.number)}>Salvar</Button>
+                                        </div>
                                     </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
-                </Accordion>
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                )
             ) : (
                 !isLoadingDetails && !error && <p className="text-sm text-muted-foreground">Nenhuma turma disponível para esta disciplina.</p>
             )}
@@ -369,8 +422,8 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
                   <Button 
                     size="sm" 
                     variant={currentStatus === 'CURRENT' ? 'default' : 'outline'}
-                    disabled={isUpdatingStatus || currentStatus === 'CURRENT' || !canTakeCourse || isLoadingDetails}
-                    title={!canTakeCourse ? "Cumpra os pré-requisitos para cursar" : ""}
+                    disabled={isUpdatingStatus || currentStatus === 'CURRENT' || !canTakeCourse || isLoadingDetails || enrolledClassNumber !== undefined}
+                    title={!canTakeCourse ? "Cumpra os pré-requisitos para cursar" : enrolledClassNumber !== undefined ? "Status gerenciado pela grade" : ""}
                   >
                     Cursar...
                     <ChevronDown className="h-4 w-4" />
@@ -407,5 +460,3 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
     </Dialog>
   );
 }
-
-    

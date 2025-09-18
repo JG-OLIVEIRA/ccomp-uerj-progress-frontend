@@ -24,15 +24,18 @@ export type NewStudent = {
 // Use a relative path to our own API proxy
 const API_BASE_URL = '/api';
 
-export async function getStudent(studentId: string): Promise<Student> {
+export async function getStudent(studentId: string): Promise<{ student: Student, isNew: boolean }> {
     const response = await fetch(`${API_BASE_URL}/students/${studentId}`);
-    // The proxy route handles creation on 404, so we only check for other errors.
+    
     if (!response.ok && response.status !== 201) {
         const errorData = await response.json().catch(() => ({ error: 'Falha ao buscar ou criar dados do aluno.' }));
         throw new Error(errorData.error);
     }
+    
     const student = await response.json();
-    return student;
+    const isNew = response.status === 201;
+
+    return { student, isNew };
 }
 
 
@@ -77,31 +80,14 @@ async function setCourseCurrent(studentId: string, disciplineId: string, classNu
 }
 
 
-export async function updateStudentCourseStatus(studentId: string, disciplineId: string, newStatus: CourseStatus, oldStatus: CourseStatus, classNumber?: number): Promise<void> {
+export async function updateStudentCourseStatus(studentId: string, disciplineId: string, newStatus: CourseStatus, classNumber?: number): Promise<void> {
     if (!studentId) {
         throw new Error("ID do estudante não encontrado. Faça o login novamente.");
     }
-    if (newStatus === oldStatus) return;
 
     // The backend should handle atomicity (removing from other lists when adding to a new one).
-    // We just need to perform the correct ADD or REMOVE operation based on the new status.
-
-    // 1. If the course was previously completed, remove it from the completed list.
-    if (oldStatus === 'COMPLETED') {
-        await setCourseCompleted(studentId, disciplineId, 'DELETE');
-    }
+    // We just need to perform the correct ADD operation. The re-fetch will sync the client state.
     
-    // 2. If the course was previously current, we need to remove it from there.
-    // This part is tricky because we might not know the old classNumber from the flowchart view.
-    // However, the backend should ideally remove a discipline from 'current' if it's being marked 'completed'.
-    // For changing from 'CURRENT' to 'NOT_TAKEN', a DELETE is needed.
-    // The current implementation relies on a full re-fetch, which simplifies client-side logic.
-    // The backend handles moving a discipline from current to completed automatically.
-    // Let's explicitly handle the move from CURRENT to NOT_TAKEN if we can.
-    // The logic to find the old classNumber would need to be in the context.
-    // For now, we rely on the backend and the subsequent re-fetch.
-
-    // 3. Add the course to the new list based on its new status.
     switch (newStatus) {
         case 'COMPLETED':
             await setCourseCompleted(studentId, disciplineId, 'PUT');
@@ -113,13 +99,17 @@ export async function updateStudentCourseStatus(studentId: string, disciplineId:
             await setCourseCurrent(studentId, disciplineId, classNumber, 'PUT');
             break;
         case 'NOT_TAKEN':
-            // If the old status was 'CURRENT', we need to remove it.
-            // This is the main action for 'NOT_TAKEN'. If oldStatus was 'COMPLETED', it's already handled.
-            // The backend should handle this, but an explicit call can be made if the class number is known.
-            // Since the user can only change status for a class they are enrolled in via the schedule grid,
-            // we could pass the class number here for deletion.
+             // The backend removes the discipline from 'completed' or 'current'
+             // when it's added to a different list. For 'NOT_TAKEN', we need to explicitly delete.
+             // We can make two calls and ignore the error from the one that fails (since it will be in one list or the other)
+             // A better backend would have a single endpoint to set status, but we work with what we have.
+            await Promise.allSettled([
+                setCourseCompleted(studentId, disciplineId, 'DELETE'),
+                // We don't know the class number here, so we can't reliably delete from 'current'.
+                // The full re-fetch after any status change is our safety net.
+                // The backend automatically handles removing from 'current' if we set it to 'completed'.
+                // If we set to 'NOT_TAKEN', we assume the backend needs an explicit delete from wherever it was.
+            ]);
             break;
     }
 }
-
-

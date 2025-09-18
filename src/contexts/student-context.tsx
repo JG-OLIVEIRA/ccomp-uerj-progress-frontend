@@ -38,12 +38,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     
     useEffect(() => {
         if (student && allCourses.length > 0 && Object.keys(courseIdMapping).length > 0) {
-            fetchStudentData(student.studentId);
+            // This will re-fetch and re-evaluate statuses if the courses list or mapping changes.
+            fetchStudentData(student.studentId, true); // Pass a flag to indicate it's a re-fetch
         }
     }, [allCourses, courseIdMapping]);
 
 
-    const fetchStudentData = useCallback(async (studentId: string) => {
+    const fetchStudentData = useCallback(async (studentId: string, isReFetch: boolean = false) => {
         if (Object.keys(courseIdMapping).length === 0 || allCourses.length === 0) {
             console.warn("Course data not ready. Deferring fetchStudentData.");
             return;
@@ -51,7 +52,18 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
         setIsLoading(true);
         try {
-            const studentData = await getStudent(studentId);
+            const { student: studentData, isNew } = await getStudent(studentId);
+
+            if(isNew) {
+                toast({
+                    title: 'Usuário criado com sucesso!',
+                    description: 'A página será recarregada. Por favor, faça o login novamente.',
+                });
+                // Force a reload to ensure a clean state after user creation
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+
             setStudent(studentData);
 
             const disciplineIdToCourseId: { [key: string]: string } = {};
@@ -100,14 +112,18 @@ export function StudentProvider({ children }: { children: ReactNode }) {
             
             const completedGroupII = allGroupIIElectives.filter(e => statuses[e.id] === 'COMPLETED');
             const currentGroupII = allGroupIIElectives.filter(e => statuses[e.id] === 'CURRENT');
+            
+            // Clone the arrays to avoid mutation issues during the loop
+            const availableCompleted = [...completedGroupII];
+            const availableCurrent = [...currentGroupII];
 
             for (const slot of groupIIElectiveSlots) {
-                if (completedGroupII.length > 0) {
+                if (availableCompleted.length > 0) {
                     statuses[slot.id] = 'COMPLETED';
-                    completedGroupII.shift(); // Consume one completed elective
-                } else if (currentGroupII.length > 0) {
+                    availableCompleted.shift(); // Consume one completed elective
+                } else if (availableCurrent.length > 0) {
                     statuses[slot.id] = 'CURRENT';
-                    currentGroupII.shift(); // Consume one current elective
+                    availableCurrent.shift(); // Consume one current elective
                 } else {
                     statuses[slot.id] = 'NOT_TAKEN';
                 }
@@ -116,7 +132,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
             setCourseStatuses(statuses);
             
-            if (!student) {
+            if (!isReFetch) {
                 toast({
                     title: 'Bem-vindo(a)!',
                     description: `Olá, ${studentData.name}. Seu progresso foi carregado.`,
@@ -135,15 +151,15 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [toast, courseIdMapping, allCourses, student]);
+    }, [toast, courseIdMapping, allCourses]);
 
     const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, classNumber?: number) => {
         if (!student) throw new Error("Estudante não está logado.");
         if (newStatus === oldStatus) return;
 
-        await updateStudentCourseStatus(student.studentId, course.disciplineId, newStatus, oldStatus, classNumber);
+        await updateStudentCourseStatus(student.studentId, course.disciplineId, newStatus, classNumber);
         
-        await fetchStudentData(student.studentId);
+        await fetchStudentData(student.studentId, true);
     };
 
     const logout = () => {

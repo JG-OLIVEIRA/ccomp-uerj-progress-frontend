@@ -19,7 +19,7 @@ interface StudentContextType {
     courseStatuses: Record<string, CourseStatus>;
     isLoading: boolean;
     fetchStudentData: (studentId: string) => Promise<void>;
-    updateCourseStatus: (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[], classNumber?: number) => Promise<void>;
+    updateCourseStatus: (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, classNumber?: number) => Promise<void>;
     logout: () => void;
     setCourseIdMapping: (mapping: CourseIdMapping) => void;
     allCourses: Course[];
@@ -96,7 +96,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
             }
             
             // Handle Group II Electives Sequentially
-            const allGroupIIElectives = allCourses.find(c => c.id === 'ELETIVAI')?.electives || [];
+            const allGroupIIElectives = groupIIElectiveSlots[0]?.electives || [];
             
             const completedGroupII = allGroupIIElectives.filter(e => statuses[e.id] === 'COMPLETED');
             const currentGroupII = allGroupIIElectives.filter(e => statuses[e.id] === 'CURRENT');
@@ -135,9 +135,9 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [toast, courseIdMapping, allCourses, student?.studentId]);
+    }, [toast, courseIdMapping, allCourses, student]);
 
-    const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, currentAllCourses: Course[], classNumber?: number) => {
+    const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, classNumber?: number) => {
         if (!student) throw new Error("Estudante não está logado.");
         if (newStatus === oldStatus) return;
 

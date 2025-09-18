@@ -1,13 +1,21 @@
 
 "use client";
 
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { BookOpenCheck } from 'lucide-react';
 import { StudentLogin } from '../student-login';
 import { StudentContext } from '@/contexts/student-context';
+import type { Course } from '@/lib/courses';
 
-export function Header({ allCourses }: { allCourses: any[] }) {
-  const { student } = useContext(StudentContext)!;
+export function Header({ allCourses }: { allCourses: Course[] }) {
+  const { student, setAllCourses } = useContext(StudentContext)!;
+
+  useEffect(() => {
+    // Load courses into the context once they are fetched.
+    if (allCourses.length > 0) {
+      setAllCourses(allCourses);
+    }
+  }, [allCourses, setAllCourses]);
 
   return (
     <header className="sticky top-0 z-20 w-full bg-background/80 backdrop-blur-sm border-b">
@@ -19,7 +27,7 @@ export function Header({ allCourses }: { allCourses: any[] }) {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <StudentLogin allCourses={allCourses} />
+          <StudentLogin />
         </div>
       </div>
     </header>

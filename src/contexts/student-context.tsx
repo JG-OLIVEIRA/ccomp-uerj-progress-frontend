@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useState, useCallback, ReactNode, useEffect } from "react";
 import { getStudent, updateStudentCourseStatus } from "@/lib/student";
 import type { Student, CurrentDiscipline } from "@/lib/student";
 import { useToast } from "@/hooks/use-toast";
@@ -18,10 +18,12 @@ interface StudentContextType {
     student: Student | null;
     courseStatuses: Record<string, CourseStatus>;
     isLoading: boolean;
-    fetchStudentData: (studentId: string, allCourses: Course[]) => Promise<void>;
+    fetchStudentData: (studentId: string) => Promise<void>;
     updateCourseStatus: (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[], classNumber?: number) => Promise<void>;
     logout: () => void;
     setCourseIdMapping: (mapping: CourseIdMapping) => void;
+    allCourses: Course[];
+    setAllCourses: (courses: Course[]) => void;
 }
 
 export const StudentContext = createContext<StudentContextType | null>(null);
@@ -31,11 +33,22 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     const [courseStatuses, setCourseStatuses] = useState<Record<string, CourseStatus>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [courseIdMapping, setCourseIdMapping] = useState<CourseIdMapping>({});
+    const [allCourses, setAllCourses] = useState<Course[]>([]);
     const { toast } = useToast();
+    
+    // This effect re-fetches student data whenever the course list changes,
+    // ensuring the statuses are always in sync with the current course data.
+    useEffect(() => {
+        if (student && allCourses.length > 0) {
+            fetchStudentData(student.studentId);
+        }
+    }, [allCourses, student?.studentId]);
 
-    const fetchStudentData = useCallback(async (studentId: string, allCourses: Course[]) => {
-        if (Object.keys(courseIdMapping).length === 0) {
-            console.warn("Course ID mapping not ready. Deferring fetchStudentData.");
+
+    const fetchStudentData = useCallback(async (studentId: string) => {
+        if (Object.keys(courseIdMapping).length === 0 || allCourses.length === 0) {
+            console.warn("Course data not ready. Deferring fetchStudentData.");
+            // We can add a retry mechanism here if needed, but for now, we'll rely on the useEffect.
             return;
         }
 
@@ -106,10 +119,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
             setCourseStatuses(statuses);
             
-            toast({
-                title: 'Bem-vindo(a)!',
-                description: `Olá, ${studentData.name}. Seu progresso foi carregado.`,
-            });
+            // Avoid showing toast on automatic re-fetches
+            if (!student) {
+                toast({
+                    title: 'Bem-vindo(a)!',
+                    description: `Olá, ${studentData.name}. Seu progresso foi carregado.`,
+                });
+            }
 
         } catch (error) {
             console.error("Erro ao buscar dados do aluno:", error);
@@ -123,15 +139,16 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [toast, courseIdMapping]);
+    }, [toast, courseIdMapping, allCourses, student]);
 
-    const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, allCourses: Course[], classNumber?: number) => {
+    const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, currentAllCourses: Course[], classNumber?: number) => {
         if (!student) throw new Error("Estudante não está logado.");
         if (newStatus === oldStatus) return;
 
         await updateStudentCourseStatus(student.studentId, course.disciplineId, newStatus, oldStatus, classNumber);
         
-        await fetchStudentData(student.studentId, allCourses);
+        // Use the most current list of courses for the re-fetch
+        await fetchStudentData(student.studentId);
     };
 
     const logout = () => {
@@ -153,7 +170,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <StudentContext.Provider value={{ student, courseStatuses, isLoading, fetchStudentData, updateCourseStatus, logout, setCourseIdMapping: handleSetCourseIdMapping }}>
+        <StudentContext.Provider value={{ student, courseStatuses, isLoading, fetchStudentData, updateCourseStatus, logout, setCourseIdMapping: handleSetCourseIdMapping, allCourses, setAllCourses }}>
             {children}
         </StudentContext.Provider>
     );

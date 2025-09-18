@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { User, LogOut, Edit } from 'lucide-react';
 import { ProfileModal } from './profile-modal';
 
-export function StudentLogin({ allCourses }: { allCourses: any[] }) {
+export function StudentLogin() {
     const [studentId, setStudentId] = useState('');
     const { student, fetchStudentData, isLoading, logout } = useContext(StudentContext)!;
     const { toast } = useToast();
@@ -28,7 +28,7 @@ export function StudentLogin({ allCourses }: { allCourses: any[] }) {
             });
             return;
         }
-        await fetchStudentData(studentId, allCourses);
+        await fetchStudentData(studentId);
     };
 
     if (student) {
@@ -65,7 +65,7 @@ export function StudentLogin({ allCourses }: { allCourses: any[] }) {
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} allCourses={allCourses} />
+                <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
             </>
         )
     }

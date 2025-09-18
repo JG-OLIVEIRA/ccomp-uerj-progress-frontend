@@ -19,7 +19,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { StudentContext } from '@/contexts/student-context';
 import { updateStudentProfile } from '@/lib/student';
-import type { Course } from '@/lib/courses';
 
 const profileSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -31,10 +30,9 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 type ProfileModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  allCourses: Course[];
 };
 
-export function ProfileModal({ isOpen, onClose, allCourses }: ProfileModalProps) {
+export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const { student, fetchStudentData } = useContext(StudentContext)!;
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,7 +67,7 @@ export function ProfileModal({ isOpen, onClose, allCourses }: ProfileModalProps)
         description: "Seu perfil foi atualizado.",
       });
       // Re-fetch student data to update the UI
-      await fetchStudentData(student.studentId, allCourses);
+      await fetchStudentData(student.studentId);
       onClose();
     } catch (error) {
       toast({

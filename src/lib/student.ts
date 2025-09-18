@@ -1,4 +1,5 @@
 
+
 import type { CourseStatus } from "@/contexts/student-context";
 
 export type CurrentDiscipline = {
@@ -25,19 +26,15 @@ const API_BASE_URL = '/api';
 
 export async function getStudent(studentId: string): Promise<Student> {
     const response = await fetch(`${API_BASE_URL}/students/${studentId}`);
-    if (!response.ok) {
-        // The API route now handles creation, so this error is less likely for 404s,
-        // but we keep it for other potential errors.
+    // The proxy route handles creation on 404, so we only check for other errors.
+    if (!response.ok && response.status !== 201) {
         const errorData = await response.json().catch(() => ({ error: 'Falha ao buscar ou criar dados do aluno.' }));
         throw new Error(errorData.error);
     }
     const student = await response.json();
-    if(response.status === 201) {
-        // You might want to show a different toast or handle the "new user" case here
-        // For now, we just proceed.
-    }
     return student;
 }
+
 
 export async function updateStudentProfile(studentId: string, data: { name?: string, lastName?: string }): Promise<Student> {
     const response = await fetch(`${API_BASE_URL}/students/${studentId}`, {
@@ -84,36 +81,44 @@ export async function updateStudentCourseStatus(studentId: string, disciplineId:
     if (!studentId) {
         throw new Error("ID do estudante não encontrado. Faça o login novamente.");
     }
+    if (newStatus === oldStatus) return;
 
-    // We remove from the old list first
+    // The backend should handle atomicity (removing from other lists when adding to a new one).
+    // We just need to perform the correct ADD or REMOVE operation based on the new status.
+
+    // 1. If the course was previously completed, remove it from the completed list.
     if (oldStatus === 'COMPLETED') {
         await setCourseCompleted(studentId, disciplineId, 'DELETE');
     }
-    // Removing from 'CURRENT' is complex as it requires the class number.
-    // Instead of handling it here, we rely on the fact that `fetchStudentData` will be called
-    // immediately after this, which will re-sync the entire state from the backend.
-    // The backend is the source of truth. When we add the discipline to a new list (e.g., 'COMPLETED'),
-    // the backend logic should handle removing it from the 'CURRENT' list.
-    // If we change from CURRENT to NOT_TAKEN, the DELETE operation for the specific class is required.
     
-    if (oldStatus === 'CURRENT') {
-        // To change from 'CURRENT' to something else, we need to know which class the student was in.
-        // This is a simplification. A more robust implementation would pass the old class number or fetch it.
-        // For now, we rely on the re-fetch from `fetchStudentData` to clear the old 'CURRENT' status
-        // after the new status is set on the backend.
-        // The backend should ideally handle this atomicity.
-    }
+    // 2. If the course was previously current, we need to remove it from there.
+    // This part is tricky because we might not know the old classNumber from the flowchart view.
+    // However, the backend should ideally remove a discipline from 'current' if it's being marked 'completed'.
+    // For changing from 'CURRENT' to 'NOT_TAKEN', a DELETE is needed.
+    // The current implementation relies on a full re-fetch, which simplifies client-side logic.
+    // The backend handles moving a discipline from current to completed automatically.
+    // Let's explicitly handle the move from CURRENT to NOT_TAKEN if we can.
+    // The logic to find the old classNumber would need to be in the context.
+    // For now, we rely on the backend and the subsequent re-fetch.
 
-
-    // Determine which list to add the course to
-    if (newStatus === 'COMPLETED') {
-        await setCourseCompleted(studentId, disciplineId, 'PUT');
+    // 3. Add the course to the new list based on its new status.
+    switch (newStatus) {
+        case 'COMPLETED':
+            await setCourseCompleted(studentId, disciplineId, 'PUT');
+            break;
+        case 'CURRENT':
+            if (typeof classNumber !== 'number') {
+                throw new Error("É necessário o número da turma para marcar como 'Cursando'.");
+            }
+            await setCourseCurrent(studentId, disciplineId, classNumber, 'PUT');
+            break;
+        case 'NOT_TAKEN':
+            // If the old status was 'CURRENT', we need to remove it.
+            // This is the main action for 'NOT_TAKEN'. If oldStatus was 'COMPLETED', it's already handled.
+            // The backend should handle this, but an explicit call can be made if the class number is known.
+            // Since the user can only change status for a class they are enrolled in via the schedule grid,
+            // we could pass the class number here for deletion.
+            break;
     }
-    if (newStatus === 'CURRENT') {
-        if (typeof classNumber !== 'number') {
-            throw new Error("É necessário o número da turma para marcar como 'Cursando'.");
-        }
-        await setCourseCurrent(studentId, disciplineId, classNumber, 'PUT');
-    }
-    // If newStatus is 'NOT_TAKEN', we've already removed it from other lists and just need to re-fetch.
 }
+

@@ -36,19 +36,16 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     const [allCourses, setAllCourses] = useState<Course[]>([]);
     const { toast } = useToast();
     
-    // This effect re-fetches student data whenever the course list changes,
-    // ensuring the statuses are always in sync with the current course data.
     useEffect(() => {
-        if (student && allCourses.length > 0) {
+        if (student && allCourses.length > 0 && Object.keys(courseIdMapping).length > 0) {
             fetchStudentData(student.studentId);
         }
-    }, [allCourses, student?.studentId]);
+    }, [allCourses, courseIdMapping]);
 
 
     const fetchStudentData = useCallback(async (studentId: string) => {
         if (Object.keys(courseIdMapping).length === 0 || allCourses.length === 0) {
             console.warn("Course data not ready. Deferring fetchStudentData.");
-            // We can add a retry mechanism here if needed, but for now, we'll rely on the useEffect.
             return;
         }
 
@@ -112,14 +109,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                     statuses[slot.id] = 'CURRENT';
                     currentGroupII.shift(); // Consume one current elective
                 } else {
-                    statuses[slot.id] = 'NOT_TAKEN'; // Or keep as is if already set
+                    statuses[slot.id] = 'NOT_TAKEN';
                 }
             }
 
 
             setCourseStatuses(statuses);
             
-            // Avoid showing toast on automatic re-fetches
             if (!student) {
                 toast({
                     title: 'Bem-vindo(a)!',
@@ -139,7 +135,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [toast, courseIdMapping, allCourses, student]);
+    }, [toast, courseIdMapping, allCourses, student?.studentId]);
 
     const updateCourseStatus = async (course: Course, newStatus: CourseStatus, oldStatus: CourseStatus, currentAllCourses: Course[], classNumber?: number) => {
         if (!student) throw new Error("Estudante não está logado.");
@@ -147,7 +143,6 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
         await updateStudentCourseStatus(student.studentId, course.disciplineId, newStatus, oldStatus, classNumber);
         
-        // Use the most current list of courses for the re-fetch
         await fetchStudentData(student.studentId);
     };
 
@@ -169,8 +164,17 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         });
     }
 
+    const handleSetAllCourses = (courses: Course[]) => {
+        setAllCourses(prev => {
+            if (prev.length === 0) {
+                return courses;
+            }
+            return prev;
+        });
+    }
+
     return (
-        <StudentContext.Provider value={{ student, courseStatuses, isLoading, fetchStudentData, updateCourseStatus, logout, setCourseIdMapping: handleSetCourseIdMapping, allCourses, setAllCourses }}>
+        <StudentContext.Provider value={{ student, courseStatuses, isLoading, fetchStudentData, updateCourseStatus, logout, setCourseIdMapping: handleSetCourseIdMapping, allCourses, setAllCourses: handleSetAllCourses }}>
             {children}
         </StudentContext.Provider>
     );

@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DisciplinesList } from './disciplines-list';
 import type { Course } from '@/lib/courses';
 import { Card, CardHeader, CardTitle, CardDescription } from './ui/card';
-import { Sync } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 
 type DisciplinesPageClientProps = {
   initialDisciplines: Course[];
@@ -77,11 +77,11 @@ export function DisciplinesPageClient({ initialDisciplines }: DisciplinesPageCli
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0">
                 <Button onClick={() => handleScrape('disciplines')} disabled={isScrapingDisciplines} size="sm">
-                    <Sync className={`mr-2 h-4 w-4 ${isScrapingDisciplines ? 'animate-spin' : ''}`} />
+                    <RotateCw className={`mr-2 h-4 w-4 ${isScrapingDisciplines ? 'animate-spin' : ''}`} />
                     Atualizar Disciplinas
                 </Button>
                 <Button onClick={() => handleScrape('whatsapp')} disabled={isScrapingWhatsapp} size="sm">
-                     <Sync className={`mr-2 h-4 w-4 ${isScrapingWhatsapp ? 'animate-spin' : ''}`} />
+                     <RotateCw className={`mr-2 h-4 w-4 ${isScrapingWhatsapp ? 'animate-spin' : ''}`} />
                     Atualizar Grupos
                 </Button>
             </div>

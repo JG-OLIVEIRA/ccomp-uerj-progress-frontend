@@ -36,6 +36,12 @@ type CourseDetailModalProps = {
   enrolledClassNumber?: number; // New prop
 };
 
+type ApiTeacher = {
+  name: string;
+  teacherId: string;
+  disciplines: string[];
+};
+
 type ApiClassDetail = {
   number: number;
   teacher: string;
@@ -89,6 +95,7 @@ function normalizeClassTimes(times: string): string {
 
 export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCredits, enrolledClassNumber }: CourseDetailModalProps) {
   const [details, setDetails] = useState<ApiDisciplineDetail | null>(null);
+  const [teachers, setTeachers] = useState<ApiTeacher[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { student, courseStatuses, updateCourseStatus } = useContext(StudentContext)!;
@@ -106,38 +113,48 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
   const areCreditsMet = course.creditLock === 0 || totalCredits >= course.creditLock;
   const canTakeCourse = !student || (areDependenciesMet && areCreditsMet);
 
+  const findTeacherName = (apiTeacherName: string) => {
+    if (!apiTeacherName || teachers.length === 0) return normalizeTeacherName(apiTeacherName);
+    
+    const normalizedApiName = normalizeTeacherName(apiTeacherName).toUpperCase();
+
+    const foundTeacher = teachers.find(t => 
+        normalizeTeacherName(t.name).toUpperCase().includes(normalizedApiName)
+    );
+
+    return foundTeacher ? normalizeTeacherName(foundTeacher.name) : normalizeTeacherName(apiTeacherName);
+  };
+
   const fetchDetails = async (signal?: AbortSignal) => {
     if (!course.disciplineId || course.isElectiveGroup) return;
 
     setIsLoadingDetails(true);
     setError(null);
     try {
-        let url: string;
-        // This is a proxy route to avoid CORS issues and to hide the external API URL
-        // We will need to create this route in our Next.js app
-        if (enrolledClassNumber !== undefined) {
-             // We don't have a direct API for a single class, so we fetch all and filter
-             // This can be optimized if the backend provides a dedicated endpoint
-            url = `/api/disciplines/${course.disciplineId}`;
-        } else {
-            url = `/api/disciplines/${course.disciplineId}`;
-        }
-      
-        const response = await fetch(url, { signal });
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
+        const [disciplineRes, teachersRes] = await Promise.all([
+            fetch(`/api/disciplines/${course.disciplineId}`, { signal }),
+            fetch(`/api/teachers`, { signal })
+        ]);
+        
+        if (!disciplineRes.ok) {
+            const errorData = await disciplineRes.json().catch(() => null);
             throw new Error(errorData?.error || 'Falha ao buscar os detalhes da disciplina');
         }
-      
-        let data: ApiDisciplineDetail = await response.json();
+
+        if (teachersRes.ok) {
+            const teachersData = await teachersRes.json();
+            setTeachers(teachersData);
+        } else {
+            console.warn('Falha ao buscar a lista de professores.');
+        }
+
+        let data: ApiDisciplineDetail = await disciplineRes.json();
         
-        // If we are enrolled, we only want to show that specific class
         if (enrolledClassNumber !== undefined) {
             const enrolledClass = data.classes.find(c => c.number === enrolledClassNumber);
             if (enrolledClass) {
                 data.classes = [enrolledClass];
             } else {
-                // This case should ideally not happen if data is consistent
                 console.warn(`Turma matriculada ${enrolledClassNumber} não encontrada para a disciplina ${course.disciplineId}`);
             }
         }
@@ -169,6 +186,7 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
       setError(null);
       setIsLoadingDetails(false);
       setWhatsappLinks({});
+      setTeachers([]);
       return;
     }
 
@@ -344,7 +362,7 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
                      details.classes.map((cls) => (
                         <div key={cls.number} className="text-sm space-y-3 p-1">
                             <p className="font-bold text-base">Turma {cls.number}</p>
-                            <p><span className="font-semibold">Professor(a):</span> {normalizeTeacherName(cls.teacher)}</p>
+                            <p><span className="font-semibold">Professor(a):</span> {findTeacherName(cls.teacher)}</p>
                             <p><span className="font-semibold">Horários:</span> {normalizeClassTimes(cls.times)}</p>
                             {cls.whatsappGroup ? (
                               <div className='flex items-center gap-2'>
@@ -376,7 +394,7 @@ export function CourseDetailModal({ isOpen, onClose, course, allCourses, totalCr
                                 <AccordionTrigger>Turma {cls.number}</AccordionTrigger>
                                 <AccordionContent>
                                     <div className="text-sm space-y-3">
-                                        <p><span className="font-semibold">Professor(a):</span> {normalizeTeacherName(cls.teacher)}</p>
+                                        <p><span className="font-semibold">Professor(a):</span> {findTeacherName(cls.teacher)}</p>
                                         <p><span className="font-semibold">Horários:</span> {normalizeClassTimes(cls.times)}</p>
                                         {cls.whatsappGroup ? (
                                           <div className='flex items-center gap-2'>

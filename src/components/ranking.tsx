@@ -37,7 +37,10 @@ export function Ranking() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!student) return;
+        if (!student) {
+            setIsLoading(false);
+            return;
+        };
         setIsLoading(true);
         fetchAllStudents().then(data => {
             setAllStudents(data);
@@ -56,7 +59,7 @@ export function Ranking() {
 
         const yearRegex = new RegExp(`^${studentYear}`);
 
-        const filteredAndRanked = allStudents
+        const fullRankedList = allStudents
             .filter(s => s.studentId && yearRegex.test(s.studentId))
             .map(s => ({
                 ...s,
@@ -70,7 +73,19 @@ export function Ranking() {
                 totalCredits: s.totalCredits,
             }));
         
-        return filteredAndRanked;
+        const top5 = fullRankedList.slice(0, 5);
+        const currentUserInList = top5.find(s => s.studentId === student.studentId);
+
+        if (currentUserInList) {
+            return top5;
+        }
+
+        const currentUserRank = fullRankedList.find(s => s.studentId === student.studentId);
+        if (currentUserRank) {
+            return [...top5, { rank: -1, studentId: 'separator', name: '...', totalCredits: -1 }, currentUserRank];
+        }
+        
+        return top5;
 
     }, [student, studentYear, allStudents]);
 
@@ -113,13 +128,24 @@ export function Ranking() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {rankedList.map(rankedStudent => (
-                            <TableRow key={rankedStudent.studentId} className={cn(rankedStudent.studentId === student.studentId && "bg-primary/10")}>
-                                <TableCell className="font-medium text-center">{rankedStudent.rank}</TableCell>
-                                <TableCell>{rankedStudent.name}</TableCell>
-                                <TableCell className="text-right font-bold">{rankedStudent.totalCredits}</TableCell>
-                            </TableRow>
-                        ))}
+                        {rankedList.map(rankedStudent => {
+                            if(rankedStudent.rank === -1) {
+                                return (
+                                    <TableRow key="separator" className="hover:bg-transparent">
+                                        <TableCell className="text-center py-2">...</TableCell>
+                                        <TableCell></TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                )
+                            }
+                            return (
+                                <TableRow key={rankedStudent.studentId} className={cn(rankedStudent.studentId === student.studentId && "bg-primary/10")}>
+                                    <TableCell className="font-medium text-center">{rankedStudent.rank}</TableCell>
+                                    <TableCell>{rankedStudent.name}</TableCell>
+                                    <TableCell className="text-right font-bold">{rankedStudent.totalCredits}</TableCell>
+                                </TableRow>
+                            )
+                        })}
                     </TableBody>
                 </Table>
             </CardContent>

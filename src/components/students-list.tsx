@@ -22,8 +22,7 @@ export function StudentsList({ initialStudents }: StudentsListProps) {
     const lowercasedTerm = searchTerm.toLowerCase();
     return initialStudents.filter(student =>
       student.name.toLowerCase().includes(lowercasedTerm) ||
-      student.lastName.toLowerCase().includes(lowercasedTerm) ||
-      student.studentId.includes(lowercasedTerm)
+      student.lastName.toLowerCase().includes(lowercasedTerm)
     );
   }, [initialStudents, searchTerm]);
 
@@ -38,7 +37,7 @@ export function StudentsList({ initialStudents }: StudentsListProps) {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Buscar por nome ou matrícula..."
+            placeholder="Buscar por nome..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-8 w-full md:w-1/3"

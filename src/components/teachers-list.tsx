@@ -7,12 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Search, Book } from 'lucide-react';
 import type { Teacher } from '@/app/teachers/page';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from './ui/button';
 
 type TeachersListProps = {
   initialTeachers: Teacher[];
+  disciplineNames: Record<string, string>;
 };
 
-export function TeachersList({ initialTeachers }: TeachersListProps) {
+export function TeachersList({ initialTeachers, disciplineNames }: TeachersListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredTeachers = useMemo(() => {
@@ -60,10 +63,38 @@ export function TeachersList({ initialTeachers }: TeachersListProps) {
                       {teacher.name.toLowerCase()}
                     </TableCell>
                     <TableCell className="text-right">
-                       <div className="flex items-center justify-end gap-2">
-                         <Book className="h-4 w-4 text-muted-foreground"/>
-                         <span>{teacher.disciplines.length}</span>
-                       </div>
+                        {teacher.disciplines.length > 0 ? (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="flex items-center justify-end gap-2 w-full">
+                                        <Book className="h-4 w-4 text-muted-foreground"/>
+                                        <span>{teacher.disciplines.length}</span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80" align="end">
+                                    <div className="grid gap-4">
+                                        <div className="space-y-2">
+                                            <h4 className="font-medium leading-none">Disciplinas Lecionadas</h4>
+                                            <p className="text-sm text-muted-foreground">
+                                                Disciplinas associadas a este professor.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-2">
+                                            {teacher.disciplines.map(discId => (
+                                                <div key={discId} className="text-sm">
+                                                    {disciplineNames[discId] || `Disciplina ${discId}`}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        ) : (
+                           <div className="flex items-center justify-end gap-2 text-muted-foreground">
+                             <Book className="h-4 w-4"/>
+                             <span>0</span>
+                           </div>
+                        )}
                     </TableCell>
                   </TableRow>
                 ))

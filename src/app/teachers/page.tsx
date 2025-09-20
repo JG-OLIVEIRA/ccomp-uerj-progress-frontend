@@ -2,6 +2,7 @@
 import { TeachersList } from '@/components/teachers-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense } from 'react';
+import { getCourses } from '@/lib/courses';
 
 export type Teacher = {
   teacherId: string;
@@ -26,8 +27,26 @@ async function fetchAllTeachers(): Promise<Teacher[]> {
 }
 
 async function TeachersPageLoader() {
-    const teachers = await fetchAllTeachers();
-    return <TeachersList initialTeachers={teachers} />;
+    const [teachers, { courses, idMapping }] = await Promise.all([
+        fetchAllTeachers(),
+        getCourses()
+    ]);
+    
+    const disciplineNames: Record<string, string> = {};
+    courses.forEach(course => {
+        if(course.disciplineId) {
+            disciplineNames[course.disciplineId] = course.name;
+        }
+        if(course.electives) {
+            course.electives.forEach(elective => {
+                if(elective.disciplineId) {
+                    disciplineNames[elective.disciplineId] = elective.name;
+                }
+            });
+        }
+    });
+
+    return <TeachersList initialTeachers={teachers} disciplineNames={disciplineNames} />;
 }
 
 function PageSkeleton() {

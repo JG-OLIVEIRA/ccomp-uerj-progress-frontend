@@ -7,7 +7,7 @@ import { CourseNode } from './course-node';
 import { Card } from './ui/card';
 import { ElectiveModal } from './elective-modal';
 import { CourseDetailModal } from './course-detail-modal';
-import { StudentContext, CourseStatus } from '@/contexts/student-context';
+import { StudentContext } from '@/contexts/student-context';
 
 type Line = {
   key: string;
@@ -27,7 +27,8 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const { student, courseStatuses, setCourseIdMapping } = useContext(StudentContext)!;
   const [lockedCourses, setLockedCourses] = useState<Set<string>>(new Set());
-  const [totalCredits, setTotalCredits] = useState(0);
+  
+  const totalCredits = student ? student.mandatoryCredits + student.electiveCredits : 0;
 
   useEffect(() => {
     setCourseIdMapping(idMapping);
@@ -40,17 +41,8 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
   useEffect(() => {
     if (!student) {
       setLockedCourses(new Set());
-      setTotalCredits(0);
       return;
     }
-
-    const completedCredits = courses.reduce((acc, course) => {
-        if (courseStatuses[course.id] === 'COMPLETED' && !course.isElectiveGroup) {
-            return acc + course.credits;
-        }
-        return acc;
-    }, 0);
-    setTotalCredits(completedCredits);
 
     const newLockedCourses = new Set<string>();
     courses.forEach(course => {
@@ -61,12 +53,12 @@ export function CourseFlowchart({ initialCourses, initialSemesters, idMapping }:
       }
       
       // Lock if credit lock is not met
-      if (course.creditLock > 0 && completedCredits < course.creditLock) {
+      if (course.creditLock > 0 && totalCredits < course.creditLock) {
         newLockedCourses.add(course.id);
       }
     });
     setLockedCourses(newLockedCourses);
-  }, [courseStatuses, courses, student]);
+  }, [courseStatuses, courses, student, totalCredits]);
 
 
   const calculateLines = useCallback(() => {

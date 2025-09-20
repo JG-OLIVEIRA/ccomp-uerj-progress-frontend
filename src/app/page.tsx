@@ -21,7 +21,7 @@ async function FlowchartLoader() {
       <Header allCourses={courses}/>
       <main className="flex-1 container mx-auto p-4 sm:p-6 md:p-8 space-y-8">
         <CourseFlowchart initialCourses={courses} initialSemesters={semesters} idMapping={idMapping} />
-        <RequirementsSummary allCourses={courses} />
+        <RequirementsSummary />
         <ScheduleGrid allCourses={courses} />
       </main>
     </>

@@ -13,6 +13,8 @@ export type Student = {
     lastName: string;
     completedDisciplines: string[];
     currentDisciplines: CurrentDiscipline[];
+    mandatoryCredits: number;
+    electiveCredits: number;
 };
 
 export type NewStudent = {
@@ -84,10 +86,24 @@ export async function updateStudentCourseStatus(studentId: string, disciplineId:
     if (!studentId) {
         throw new Error("ID do estudante não encontrado. Faça o login novamente.");
     }
-
-    // The backend should handle atomicity (removing from other lists when adding to a new one).
-    // We just need to perform the correct ADD operation. The re-fetch will sync the client state.
     
+    // Simplification: Let the backend handle atomicity.
+    // We just perform the correct ADD or DELETE operation based on the new status.
+    // A full re-fetch after the update will ensure client state consistency.
+
+    // To set a course to 'NOT_TAKEN', we need to delete it from both potential lists.
+    // We use Promise.allSettled to ignore the expected failure from one of the calls.
+    if (newStatus === 'NOT_TAKEN') {
+         await Promise.allSettled([
+            setCourseCompleted(studentId, disciplineId, 'DELETE'),
+            // We can't reliably delete from 'current' without the class number,
+            // but the backend handles removing from 'current' if we add to 'completed',
+            // and the re-fetch will clean up the state.
+         ]);
+        return;
+    }
+
+    // For 'COMPLETED' or 'CURRENT', we perform a PUT request.
     switch (newStatus) {
         case 'COMPLETED':
             await setCourseCompleted(studentId, disciplineId, 'PUT');
@@ -97,19 +113,6 @@ export async function updateStudentCourseStatus(studentId: string, disciplineId:
                 throw new Error("É necessário o número da turma para marcar como 'Cursando'.");
             }
             await setCourseCurrent(studentId, disciplineId, classNumber, 'PUT');
-            break;
-        case 'NOT_TAKEN':
-             // The backend removes the discipline from 'completed' or 'current'
-             // when it's added to a different list. For 'NOT_TAKEN', we need to explicitly delete.
-             // We can make two calls and ignore the error from the one that fails (since it will be in one list or the other)
-             // A better backend would have a single endpoint to set status, but we work with what we have.
-            await Promise.allSettled([
-                setCourseCompleted(studentId, disciplineId, 'DELETE'),
-                // We don't know the class number here, so we can't reliably delete from 'current'.
-                // The full re-fetch after any status change is our safety net.
-                // The backend automatically handles removing from 'current' if we set it to 'completed'.
-                // If we set to 'NOT_TAKEN', we assume the backend needs an explicit delete from wherever it was.
-            ]);
             break;
     }
 }

@@ -2,57 +2,44 @@
 "use client";
 
 import { useMemo, useContext } from 'react';
-import type { Course } from '@/lib/courses';
-import { StudentContext, type CourseStatus } from '@/contexts/student-context';
+import { StudentContext } from '@/contexts/student-context';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { Skeleton } from './ui/skeleton';
 
 const REQUIRED_MANDATORY_CREDITS = 177;
 const REQUIRED_ELECTIVE_CREDITS = 20;
 
-type RequirementsSummaryProps = {
-  allCourses: Course[];
-};
-
-export function RequirementsSummary({ allCourses }: RequirementsSummaryProps) {
-  const { student, courseStatuses } = useContext(StudentContext)!;
+export function RequirementsSummary() {
+  const { student } = useContext(StudentContext)!;
 
   const summary = useMemo(() => {
-    let completedMandatory = 0;
-    let completedElective = 0;
+    if (!student) {
+      return null;
+    }
 
-    allCourses.forEach(course => {
-      if (courseStatuses[course.id] === 'COMPLETED' && !course.isElectiveGroup) {
-        if (course.category === 'Obrigatória') {
-          completedMandatory += course.credits;
-        } else if (course.category === 'Eletiva') {
-          completedElective += course.credits;
-        }
-      }
-    });
+    const { mandatoryCredits, electiveCredits } = student;
 
-    const remainingMandatory = Math.max(0, REQUIRED_MANDATORY_CREDITS - completedMandatory);
-    const remainingElective = Math.max(0, REQUIRED_ELECTIVE_CREDITS - completedElective);
+    const remainingMandatory = Math.max(0, REQUIRED_MANDATORY_CREDITS - mandatoryCredits);
+    const remainingElective = Math.max(0, REQUIRED_ELECTIVE_CREDITS - electiveCredits);
 
     return {
       mandatory: {
-        completed: completedMandatory,
+        completed: mandatoryCredits,
         remaining: remainingMandatory,
         total: REQUIRED_MANDATORY_CREDITS,
         status: remainingMandatory === 0 ? 'Completo' : 'Incompleto',
       },
       elective: {
-        completed: completedElective,
+        completed: electiveCredits,
         remaining: remainingElective,
         total: REQUIRED_ELECTIVE_CREDITS,
         status: remainingElective === 0 ? 'Completo' : 'Incompleto',
       },
     };
-  }, [allCourses, courseStatuses]);
+  }, [student]);
 
-  if (!student) {
+  if (!student || !summary) {
     return (
         <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>

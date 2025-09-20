@@ -60,13 +60,13 @@ const getColorForCourse = (courseId: string) => {
 };
 
 const findCourseByDisciplineId = (allCourses: Course[], disciplineId: string): Course | undefined => {
-    // First, search in the main course list
-    const mainCourse = allCourses.find(c => c.disciplineId === disciplineId);
+    // First, search in the main course list for a non-elective
+    const mainCourse = allCourses.find(c => !c.isElectiveGroup && c.disciplineId === disciplineId);
     if (mainCourse) {
         return mainCourse;
     }
 
-    // If not found, search within elective groups
+    // If not found, search within all elective groups
     for (const course of allCourses) {
         if (course.isElectiveGroup && course.electives) {
             const electiveCourse = course.electives.find(e => e.disciplineId === disciplineId);
@@ -76,6 +76,7 @@ const findCourseByDisciplineId = (allCourses: Course[], disciplineId: string): C
         }
     }
 
+    console.warn(`Course with disciplineId ${disciplineId} not found.`);
     return undefined;
 };
 
@@ -86,7 +87,8 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
     const [selectedClassNumber, setSelectedClassNumber] = useState<number | undefined>(undefined);
-    const [totalCredits, setTotalCredits] = useState(0);
+    
+    const totalCredits = student ? student.mandatoryCredits + student.electiveCredits : 0;
 
     useEffect(() => {
         const fetchSchedules = async () => {
@@ -102,15 +104,6 @@ export function ScheduleGrid({ allCourses }: { allCourses: Course[] }) {
                 (d): d is CurrentDiscipline => typeof d === 'object' && d !== null && 'disciplineId' in d && 'classNumber' in d
             );
             
-            const completedCredits = allCourses.reduce((acc, course) => {
-                const isCompleted = student.completedDisciplines.some(completedId => completedId === course.disciplineId);
-                if (isCompleted && !course.isElectiveGroup) {
-                    return acc + course.credits;
-                }
-                return acc;
-            }, 0);
-            setTotalCredits(completedCredits);
-
             const detailsPromises = currentDisciplines.map(d => fetchDisciplineDetails(d.disciplineId));
             const detailsResults = await Promise.all(detailsPromises);
 

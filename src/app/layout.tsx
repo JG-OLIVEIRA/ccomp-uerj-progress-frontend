@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { StudentProvider } from '@/contexts/student-context';
+import { Header } from '@/components/layout/header';
 
 export const metadata: Metadata = {
   title: 'Ccomp uerj progress',
@@ -23,6 +24,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <StudentProvider>
+          <Header />
           {children}
         </StudentProvider>
         <Toaster />

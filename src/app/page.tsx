@@ -1,6 +1,5 @@
 
 import { CourseFlowchart } from "@/components/course-flowchart";
-import { Header } from "@/components/layout/header";
 import { getCourses } from "@/lib/courses";
 import type { Course, CourseIdMapping } from "@/lib/courses";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,15 +17,12 @@ type FlowchartData = {
 async function FlowchartLoader() {
   const { courses, semesters, idMapping }: FlowchartData = await getCourses();
   return (
-    <>
-      <Header allCourses={courses}/>
-      <main className="flex-1 container mx-auto p-4 sm:p-6 md:p-8 space-y-8">
-        <CourseFlowchart initialCourses={courses} initialSemesters={semesters} idMapping={idMapping} />
-        <RequirementsSummary />
-        <Ranking />
-        <ScheduleGrid allCourses={courses} />
-      </main>
-    </>
+    <main className="flex-1 container mx-auto p-4 sm:p-6 md:p-8 space-y-8">
+      <CourseFlowchart initialCourses={courses} initialSemesters={semesters} idMapping={idMapping} />
+      <RequirementsSummary />
+      <Ranking />
+      <ScheduleGrid allCourses={courses} />
+    </main>
   );
 }
 

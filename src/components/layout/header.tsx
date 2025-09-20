@@ -15,7 +15,7 @@ export function Header() {
 
   const navLinks = [
     { href: '/', label: 'Fluxograma' },
-    { href: '/students', label: 'Estudantes' },
+    { href: '/disciplines', label: 'Disciplinas' },
     { href: '/teachers', label: 'Professores' },
   ];
 

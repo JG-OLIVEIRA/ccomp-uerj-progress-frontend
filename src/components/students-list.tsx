@@ -50,7 +50,6 @@ export function StudentsList({ initialStudents }: StudentsListProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Matrícula</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead className="text-center">Créd. Obrigatórios</TableHead>
                 <TableHead className="text-center">Créd. Eletivos</TableHead>
@@ -61,7 +60,6 @@ export function StudentsList({ initialStudents }: StudentsListProps) {
               {filteredStudents.length > 0 ? (
                 filteredStudents.map(student => (
                   <TableRow key={student.studentId}>
-                    <TableCell className="font-mono">{student.studentId}</TableCell>
                     <TableCell>{`${student.name} ${student.lastName}`}</TableCell>
                     <TableCell className="text-center">{student.mandatoryCredits}</TableCell>
                     <TableCell className="text-center">{student.electiveCredits}</TableCell>
@@ -72,7 +70,7 @@ export function StudentsList({ initialStudents }: StudentsListProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
+                  <TableCell colSpan={4} className="text-center">
                     Nenhum estudante encontrado.
                   </TableCell>
                 </TableRow>

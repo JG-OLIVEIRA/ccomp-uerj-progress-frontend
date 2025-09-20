@@ -18,9 +18,8 @@ export function DisciplinesList({ initialDisciplines }: DisciplinesListProps) {
 
   const sortedDisciplines = useMemo(() => {
     return [...initialDisciplines].sort((a, b) => {
-        // Sort by semester first, then by name
         if (a.semester !== b.semester) {
-            return (a.semester || 99) - (b.semester || 99); // Put courses without semester at the end
+            return (a.semester || 99) - (b.semester || 99);
         }
         return a.name.localeCompare(b.name);
     });
@@ -38,23 +37,17 @@ export function DisciplinesList({ initialDisciplines }: DisciplinesListProps) {
   }, [sortedDisciplines, searchTerm]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Lista de Disciplinas</CardTitle>
-        <CardDescription>
-          Visualize todas as disciplinas do curso de Ciência da Computação.
-        </CardDescription>
-        <div className="relative pt-4">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+    <>
+        <div className="relative px-6 pb-4">
+            <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
             type="text"
             placeholder="Buscar por nome ou código..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-8 w-full md:w-1/3"
-          />
+            />
         </div>
-      </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <Table>
@@ -95,6 +88,6 @@ export function DisciplinesList({ initialDisciplines }: DisciplinesListProps) {
           </Table>
         </div>
       </CardContent>
-    </Card>
+    </>
   );
 }

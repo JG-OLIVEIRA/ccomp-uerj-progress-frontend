@@ -81,7 +81,7 @@ export function Ranking() {
         }
 
         const currentUserRank = fullRankedList.find(s => s.studentId === student.studentId);
-        if (currentUserRank) {
+        if (currentUserRank && fullRankedList.length > 5) {
             return [...top5, { rank: -1, studentId: 'separator', name: '...', totalCredits: -1 }, currentUserRank];
         }
         
@@ -132,7 +132,7 @@ export function Ranking() {
                             if(rankedStudent.rank === -1) {
                                 return (
                                     <TableRow key="separator" className="hover:bg-transparent">
-                                        <TableCell className="text-center py-2">...</TableCell>
+                                        <TableCell className="text-center py-2 font-bold">...</TableCell>
                                         <TableCell></TableCell>
                                         <TableCell></TableCell>
                                     </TableRow>

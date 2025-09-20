@@ -114,7 +114,7 @@ export function Ranking() {
         <Card className="w-full max-w-4xl mx-auto">
             <CardHeader className='text-center'>
                 <CardTitle className="text-lg flex items-center justify-center gap-2">
-                    <Trophy className="text-yellow-500" /> Ranking de {studentYear}
+                    <Trophy className="text-yellow-500" /> Top 5 de {studentYear}
                 </CardTitle>
                 <CardDescription>Sua posição entre os estudantes que ingressaram no mesmo ano.</CardDescription>
             </CardHeader>
@@ -128,10 +128,10 @@ export function Ranking() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {rankedList.map(rankedStudent => {
-                            if(rankedStudent.rank === -1) {
+                        {rankedList.map((rankedStudent, index) => {
+                            if (rankedStudent.rank === -1) {
                                 return (
-                                    <TableRow key="separator" className="hover:bg-transparent">
+                                    <TableRow key={`separator-${index}`} className="hover:bg-transparent">
                                         <TableCell className="text-center py-2 font-bold">...</TableCell>
                                         <TableCell></TableCell>
                                         <TableCell></TableCell>
